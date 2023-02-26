@@ -1,0 +1,9 @@
+{
+  "domain": "deye_dehumidifier",
+  "name": "Deye Dehumidifier",
+  "codeowners": ["@stackia"],
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/deye_dehumidifier",
+  "iot_class": "cloud_push",
+  "requirements": ["libdeye==1.0.2"]
+}

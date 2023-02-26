@@ -1,0 +1,10 @@
+"""Constants for the Deye Dehumidifier integration."""
+
+DOMAIN = "deye_dehumidifier"
+CONF_USERNAME = "username"
+CONF_PASSWORD = "password"
+CONF_AUTH_TOKEN = "auth_token"
+DATA_CLOUD_API = "cloud_api"
+DATA_MQTT_CLIENT = "mqtt_client"
+DATA_DEVICE_LIST = "device_list"
+MANUFACTURER = "Ningbo Deye Technology Co., Ltd"
