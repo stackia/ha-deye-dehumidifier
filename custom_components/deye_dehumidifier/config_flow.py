@@ -74,7 +74,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             result = await validate_input(self.hass, user_input)
-            if "errors" in result is None:
+            if "errors" not in result:
                 await self.async_set_unique_id(result["unique_id"])
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
