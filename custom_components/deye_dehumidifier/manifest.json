@@ -2,10 +2,10 @@
   "domain": "deye_dehumidifier",
   "name": "Deye Dehumidifier",
   "codeowners": ["@stackia"],
-  "version": "1.0.1",
   "config_flow": true,
   "documentation": "https://github.com/stackia/ha-deye-dehumidifier",
-  "issue_tracker": "https://github.com/stackia/ha-deye-dehumidifier/issues",
   "iot_class": "cloud_push",
-  "requirements": ["libdeye==1.0.2"]
+  "issue_tracker": "https://github.com/stackia/ha-deye-dehumidifier/issues",
+  "requirements": ["libdeye==1.0.2"],
+  "version": "1.0.1"
 }
