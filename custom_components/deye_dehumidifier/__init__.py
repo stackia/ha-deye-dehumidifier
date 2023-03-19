@@ -104,6 +104,7 @@ class DeyeEntity(Entity):
         self._device = device
         self._mqtt_client = mqtt_client
         self._attr_has_entity_name = True
+        self._attr_available = self._device["online"]
         self._attr_unique_id = self._device["mac"]
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._device["mac"])},
@@ -114,6 +115,11 @@ class DeyeEntity(Entity):
         self._attr_should_poll = False
         self.device_state = DeyeDeviceState(self._device["payload"])
 
+    def update_device_availability(self, available: bool):
+        """Will be called when received new availability status."""
+        self._attr_available = available
+        self.async_write_ha_state()
+
     def update_device_state(self, state: DeyeDeviceState):
         """Will be called when received new DeyeDeviceState."""
         self.device_state = state
@@ -122,7 +128,14 @@ class DeyeEntity(Entity):
     async def async_added_to_hass(self) -> None:
         """When entity is added to Home Assistant."""
         self.async_on_remove(
-            self._mqtt_client.subscribe(
+            self._mqtt_client.subscribe_availability_change(
+                self._device["product_id"],
+                self._device["device_id"],
+                self.update_device_availability,
+            )
+        )
+        self.async_on_remove(
+            self._mqtt_client.subscribe_state_change(
                 self._device["product_id"],
                 self._device["device_id"],
                 self.update_device_state,
