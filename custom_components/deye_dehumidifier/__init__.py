@@ -1,5 +1,6 @@
 """The Deye Dehumidifier integration."""
 from __future__ import annotations
+import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -34,6 +35,8 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.CLIMATE,
 ]
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -101,6 +104,8 @@ class DeyeEntity(Entity):
         self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
     ) -> None:
         """Initialize the instance."""
+        _LOGGER.warning("Device: %s", device)
+        _LOGGER.warning("Device payload: %s", device["payload"])
         self._device = device
         self._mqtt_client = mqtt_client
         self._attr_has_entity_name = True
