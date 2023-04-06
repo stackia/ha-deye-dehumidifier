@@ -37,7 +37,7 @@ async def async_setup_entry(
 class DeyeHumiditySensor(DeyeEntity, SensorEntity):
     """Humidity sensor entity."""
 
-    _attr_name = "Humidity"
+    _attr_translation_key = "humidity"
     _attr_device_class = SensorDeviceClass.HUMIDITY
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = PERCENTAGE
@@ -59,7 +59,7 @@ class DeyeHumiditySensor(DeyeEntity, SensorEntity):
 class DeyeTemperatureSensor(DeyeEntity, SensorEntity):
     """Temperature sensor entity."""
 
-    _attr_name = "Temperature"
+    _attr_translation_key = "temperature"
     _attr_device_class = SensorDeviceClass.TEMPERATURE
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS

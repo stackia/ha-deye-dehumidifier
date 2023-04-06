@@ -1,0 +1,65 @@
+{
+  "title": "德業除濕機",
+  "config": {
+    "abort": {
+      "already_configured_account": "帳號已經設定完成",
+      "reauth_successful": "重新認證成功"
+    },
+    "error": {
+      "cannot_connect": "連線失敗",
+      "invalid_auth": "身份驗證無效",
+      "unknown": "未預期錯誤"
+    },
+    "step": {
+      "reauth_confirm": {
+        "title": "重新認證整合",
+        "description": "請重新輸入帳號 {username} 的密碼",
+        "data": {
+          "password": "密碼"
+        }
+      },
+      "user": {
+        "data": {
+          "username": "手機號碼",
+          "password": "密碼"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "環境溫度"
+      },
+      "humidity": {
+        "name": "環境濕度"
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "童鎖"
+      },
+      "anion": {
+        "name": "負離子"
+      },
+      "water_pump": {
+        "name": "水泵"
+      }
+    },
+    "binary_sensor": {
+      "water_tank": {
+        "name": "水箱",
+        "state": {
+          "on": "已滿",
+          "off": "未滿"
+        }
+      },
+      "defrosting": {
+        "name": "除霜"
+      },
+      "fan": {
+        "name": "風扇"
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "title": "德业除湿机",
+  "config": {
+    "abort": {
+      "already_configured_account": "账户已经配置过了",
+      "reauth_successful": "重新认证成功"
+    },
+    "error": {
+      "cannot_connect": "连接失败",
+      "invalid_auth": "身份认证无效",
+      "unknown": "非预期的错误"
+    },
+    "step": {
+      "reauth_confirm": {
+        "title": "使集成重新进行身份认证",
+        "description": "请重新输入账号 {username} 的密码",
+        "data": {
+          "password": "密码"
+        }
+      },
+      "user": {
+        "data": {
+          "username": "手机号",
+          "password": "密码"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "环境温度"
+      },
+      "humidity": {
+        "name": "环境湿度"
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "童锁"
+      },
+      "anion": {
+        "name": "负离子"
+      },
+      "water_pump": {
+        "name": "水泵"
+      }
+    },
+    "binary_sensor": {
+      "water_tank": {
+        "name": "水箱",
+        "state": {
+          "on": "已满",
+          "off": "未满"
+        }
+      },
+      "defrosting": {
+        "name": "除霜"
+      },
+      "fan": {
+        "name": "风扇"
+      }
+    }
+  }
+}

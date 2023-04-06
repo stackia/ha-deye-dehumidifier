@@ -5,8 +5,8 @@ from typing import Any
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
@@ -36,7 +36,7 @@ async def async_setup_entry(
 class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
     """Child lock switch entity."""
 
-    _attr_name = "Child Lock"
+    _attr_translation_key = "child_lock"
     _attr_device_class = SwitchDeviceClass.SWITCH
     _attr_entity_category = EntityCategory.CONFIG
     _attr_icon = "mdi:teddy-bear"
@@ -68,6 +68,11 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
 class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
     """Anion switch entity."""
 
+    _attr_translation_key = "anion"
+    _attr_device_class = SwitchDeviceClass.SWITCH
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:atom"
+
     def __init__(
         self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
     ) -> None:
@@ -75,9 +80,6 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
         super().__init__(device, mqtt_client)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-anion"
-        self._attr_name = "Anion"
-        self._attr_device_class = SwitchDeviceClass.SWITCH
-        self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def is_on(self) -> bool:
@@ -98,7 +100,7 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
 class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
     """Water pump switch entity."""
 
-    _attr_name = "Water Pump"
+    _attr_translation_key = "water_pump"
     _attr_device_class = SwitchDeviceClass.SWITCH
     _attr_entity_category = EntityCategory.CONFIG
 

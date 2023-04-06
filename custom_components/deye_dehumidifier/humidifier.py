@@ -41,7 +41,7 @@ async def async_setup_entry(
 
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
-    """Dehumidifier entity. Models that doesn't support fan control will use this entity."""
+    """Dehumidifier entity. Models that don't support fan control will use this entity."""
 
     _attr_device_class = HumidifierDeviceClass.DEHUMIDIFIER
 

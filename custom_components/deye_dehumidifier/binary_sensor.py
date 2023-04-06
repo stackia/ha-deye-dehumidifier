@@ -7,7 +7,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
@@ -37,6 +37,10 @@ async def async_setup_entry(
 class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
     """Water tank binary sensor entity."""
 
+    _attr_translation_key = "water_tank"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     def __init__(
         self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
     ) -> None:
@@ -44,9 +48,6 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
         super().__init__(device, mqtt_client)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-water-tank"
-        self._attr_name = "Water Tank"
-        self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def is_on(self) -> bool:
@@ -62,7 +63,7 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
 class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
     """Defrosting binary entity."""
 
-    _attr_name = "Defrosting"
+    _attr_translation_key = "defrosting"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -92,7 +93,7 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
 class DeyeFanStateBinarySensor(DeyeEntity, BinarySensorEntity):
     """Fan state binary entity."""
 
-    _attr_name = "Fan"
+    _attr_translation_key = "fan"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
