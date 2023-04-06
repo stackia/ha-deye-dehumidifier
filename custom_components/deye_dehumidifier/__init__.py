@@ -113,7 +113,13 @@ class DeyeEntity(Entity):
             name=self._device["device_name"],
         )
         self._attr_should_poll = False
-        self.device_state = DeyeDeviceState(self._device["payload"])
+        # payload from the server sometimes are not a valid string
+        if isinstance(self._device["payload"], str):
+            self.device_state = DeyeDeviceState(self._device["payload"])
+        else:
+            self.device_state = DeyeDeviceState(
+                "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
+            )
 
     def update_device_availability(self, available: bool):
         """Will be called when received new availability status."""
