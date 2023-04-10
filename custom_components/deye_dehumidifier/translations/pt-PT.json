@@ -1,0 +1,65 @@
+{
+  "title": "Deye Desumidificador",
+  "config": {
+    "abort": {
+      "already_configured_account": "Conta já configurada",
+      "reauth_successful": "A reautenticação bem efetuada"
+    },
+    "error": {
+      "cannot_connect": "Falha na ligação",
+      "invalid_auth": "Falha na autenticação",
+      "unknown": "Erro desconhecido"
+    },
+    "step": {
+      "reauth_confirm": {
+        "title": "Reutanticação na integração",
+        "description": "Inserir a senha para o utilizador: {username}",
+        "data": {
+          "password": "Senha"
+        }
+      },
+      "user": {
+        "data": {
+          "username": "Número de telefone",
+          "password": "Senha"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperatura"
+      },
+      "humidity": {
+        "name": "Humidade"
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "Bloqueio anti crianças"
+      },
+      "anion": {
+        "name": "Anion"
+      },
+      "water_pump": {
+        "name": "Bomba de água"
+      }
+    },
+    "binary_sensor": {
+      "water_tank": {
+        "name": "Deposito de água",
+        "state": {
+          "on": "Cheio",
+          "off": "Não Cheio"
+        }
+      },
+      "defrosting": {
+        "name": "Descongelação"
+      },
+      "fan": {
+        "name": "Ventoinha"
+      }
+    }
+  }
+}
