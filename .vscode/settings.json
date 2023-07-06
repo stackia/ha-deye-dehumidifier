@@ -1,6 +1,9 @@
 {
-  "python.analysis.typeCheckingMode": "strict",
-  "python.linting.flake8Enabled": true,
+  "python.analysis.typeCheckingMode": "off",
   "python.linting.enabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.linting.mypyArgs": ["--config-file=./mypy.ini"],
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
   "python.formatting.provider": "black"
 }

@@ -39,7 +39,7 @@ PLATFORMS: list[Platform] = [
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Deye Dehumidifier from a config entry."""
 
-    def on_auth_token_refreshed(auth_token: str):
+    def on_auth_token_refreshed(auth_token: str) -> None:
         hass.config_entries.async_update_entry(
             entry, data=entry.data | {CONF_AUTH_TOKEN: auth_token}
         )
