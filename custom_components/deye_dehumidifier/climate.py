@@ -51,6 +51,7 @@ class DeyeAdvancedDehumidifier(DeyeEntity, ClimateEntity):
 
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_swing_modes = [SWING_ON, SWING_OFF]
+    _attr_name = None  # Inherits from device name
 
     def __init__(
         self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
