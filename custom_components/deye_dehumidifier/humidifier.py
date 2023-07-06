@@ -10,7 +10,7 @@ from homeassistant.components.humidifier import (
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.components.humidifier.const import (  # pylint: disable=hass-component-root-import
+from homeassistant.components.humidifier.const import (
     MODE_BOOST,
     MODE_COMFORT,
     MODE_SLEEP,
@@ -66,6 +66,11 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     def target_humidity(self) -> int:
         """Return the humidity we try to reach."""
         return self.device_state.target_humidity
+
+    @property
+    def current_humidity(self) -> int | None:
+        """Return the current humidity."""
+        return self.device_state.environment_humidity
 
     @property
     def is_on(self) -> bool:
