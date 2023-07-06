@@ -10,9 +10,9 @@ This is a custom component for Home Assistant to integrate [Deye](https://deye.c
 
 You can install using [HACS](https://hacs.xyz/).
 
-1. Add <https://github.com/stackia/ha-deye-dehumidifier> as custom repository in HACS.
-2. Install `Deye Dehumidifier`.
-3. Setup the integration by typing your username and password of the Deye app.
+1. Make sure you have correctly installed HACS.
+2. Search `Deye Dehumidifier` in `HACS -> Integrations -> Explore & Download Repositories`
+3. Setup the integration by typing your username (phone number) and password of the Deye app.
 
 ## Supported Models
 
