@@ -85,7 +85,7 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
     def icon(self) -> str:
         """Return the icon based on the defrosting state."""
         return (
-            "mdi:snowflake-check"
-            if self.device_state.fan_running
-            else "mdi:snowflake-melt"
+            "mdi:snowflake-melt"
+            if self.device_state.defrosting
+            else "mdi:snowflake-check"
         )
