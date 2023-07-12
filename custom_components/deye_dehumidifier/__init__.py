@@ -106,6 +106,7 @@ class DeyeEntity(Entity):
         self._attr_has_entity_name = True
         self._attr_available = self._device["online"]
         self._attr_unique_id = self._device["mac"]
+        self.entity_id_base = f'deye_{self._device["mac"].lower()}'  # We will override HA generated entity ID
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._device["mac"])},
             model=self._device["product_name"],
@@ -121,12 +122,12 @@ class DeyeEntity(Entity):
                 "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
             )
 
-    def update_device_availability(self, available: bool):
+    def update_device_availability(self, available: bool) -> None:
         """Will be called when received new availability status."""
         self._attr_available = available
         self.async_write_ha_state()
 
-    def update_device_state(self, state: DeyeDeviceState):
+    def update_device_state(self, state: DeyeDeviceState) -> None:
         """Will be called when received new DeyeDeviceState."""
         self.device_state = state
         self.async_write_ha_state()
