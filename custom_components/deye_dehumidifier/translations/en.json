@@ -56,7 +56,9 @@
       },
       "defrosting": {
         "name": "Defrosting"
-      },
+      }
+    },
+    "fan": {
       "fan": {
         "name": "Fan"
       }

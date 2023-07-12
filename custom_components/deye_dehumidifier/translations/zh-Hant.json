@@ -56,7 +56,9 @@
       },
       "defrosting": {
         "name": "除霜"
-      },
+      }
+    },
+    "fan": {
       "fan": {
         "name": "風扇"
       }

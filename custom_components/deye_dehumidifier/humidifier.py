@@ -36,9 +36,7 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
 
     for device in data[DATA_DEVICE_LIST]:
-        feature_config = get_product_feature_config(device["product_id"])
-        if len(feature_config["fan_speed"]) == 0:
-            async_add_entities([DeyeDehumidifier(device, data[DATA_MQTT_CLIENT])])
+        async_add_entities([DeyeDehumidifier(device, data[DATA_MQTT_CLIENT])])
 
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):

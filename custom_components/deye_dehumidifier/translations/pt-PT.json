@@ -56,7 +56,9 @@
       },
       "defrosting": {
         "name": "Descongelação"
-      },
+      }
+    },
+    "fan": {
       "fan": {
         "name": "Ventoinha"
       }
