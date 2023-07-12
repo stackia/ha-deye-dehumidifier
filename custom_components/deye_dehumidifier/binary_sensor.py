@@ -29,7 +29,6 @@ async def async_setup_entry(
             [
                 DeyeWaterTankBinarySensor(device, data[DATA_MQTT_CLIENT]),
                 DeyeDefrostingBinarySensor(device, data[DATA_MQTT_CLIENT]),
-                DeyeFanStateBinarySensor(device, data[DATA_MQTT_CLIENT]),
             ]
         )
 
@@ -55,7 +54,7 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
         return self.device_state.water_tank_full
 
     @property
-    def icon(self) -> str | None:
+    def icon(self) -> str:
         """Return the icon based on the water tank state."""
         return "mdi:beer" if self.device_state.water_tank_full else "mdi:beer-outline"
 
@@ -81,36 +80,10 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
         return self.device_state.defrosting
 
     @property
-    def icon(self) -> str | None:
+    def icon(self) -> str:
         """Return the icon based on the defrosting state."""
         return (
             "mdi:snowflake-check"
             if self.device_state.fan_running
             else "mdi:snowflake-melt"
         )
-
-
-class DeyeFanStateBinarySensor(DeyeEntity, BinarySensorEntity):
-    """Fan state binary entity."""
-
-    _attr_translation_key = "fan"
-    _attr_device_class = BinarySensorDeviceClass.RUNNING
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(device, mqtt_client)
-        assert self._attr_unique_id is not None
-        self._attr_unique_id += "-fan-state"
-
-    @property
-    def is_on(self) -> bool:
-        """Return true if the device fan is running (which means it's currently not idle)."""
-        return self.device_state.fan_running
-
-    @property
-    def icon(self) -> str | None:
-        """Return the icon based on the fan running state."""
-        return "mdi:fan" if self.device_state.fan_running else "mdi:fan-clock"

@@ -14,6 +14,7 @@ from homeassistant.components.humidifier.const import (
     MODE_BOOST,
     MODE_COMFORT,
     MODE_SLEEP,
+    HumidifierAction,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -41,7 +42,7 @@ async def async_setup_entry(
 
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
-    """Dehumidifier entity. Models that don't support fan control will use this entity."""
+    """Dehumidifier entity."""
 
     _attr_device_class = HumidifierDeviceClass.DEHUMIDIFIER
     _attr_name = None  # Inherits from device name
@@ -69,7 +70,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         return self.device_state.target_humidity
 
     @property
-    def current_humidity(self) -> int | None:
+    def current_humidity(self) -> int:
         """Return the current humidity."""
         return self.device_state.environment_humidity
 
@@ -79,9 +80,19 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         return self.device_state.power_switch
 
     @property
-    def mode(self) -> str | None:
+    def mode(self) -> str:
         """Return the working mode."""
         return deye_mode_to_hass_mode(self.device_state.mode)
+
+    @property
+    def action(self) -> HumidifierAction:
+        """Return the current action."""
+        if not self.device_state.power_switch:
+            return HumidifierAction.OFF
+        elif self.device_state.fan_running:
+            return HumidifierAction.DRYING
+        else:
+            return HumidifierAction.IDLE
 
     async def async_set_mode(self, mode: str) -> None:
         """Set new working mode."""
