@@ -14,7 +14,6 @@ from homeassistant.components.humidifier.const import (
     MODE_BOOST,
     MODE_COMFORT,
     MODE_SLEEP,
-    HumidifierAction,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -84,14 +83,21 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         return deye_mode_to_hass_mode(self.device_state.mode)
 
     @property
-    def action(self) -> HumidifierAction:
-        """Return the current action."""
+    def action(self) -> str:
+        """
+        Return the current action.
+
+        off/drying/idle are from `homeassistant.components.humidifier.const.HumidifierAction`
+
+        For backward compatibility, we cannot directly import them from homeassistant (which requires
+        homeassistant >= 2023.7)
+        """
         if not self.device_state.power_switch:
-            return HumidifierAction.OFF
+            return "off"
         elif self.device_state.fan_running:
-            return HumidifierAction.DRYING
+            return "drying"
         else:
-            return HumidifierAction.IDLE
+            return "idle"
 
     async def async_set_mode(self, mode: str) -> None:
         """Set new working mode."""
