@@ -157,7 +157,21 @@ class DeyeEntity(Entity):
                 self.update_device_state,
             )
         )
+        self.poll_device_state()
+        self.async_on_remove(self.cancel_polling)
 
+    @callback
+    def poll_device_state(self, now: datetime | None = None) -> None:
+        """
+        Some Deye devices have a very long heartbeat period. So polling is still necessary to get the latest state as
+        quickly as possible.
+        """
+        self._mqtt_client.publish_command(
+            self._device["product_id"],
+            self._device["device_id"],
+            QUERY_DEVICE_STATE_COMMAND,
+        )
+        self.cancel_polling = async_call_later(self.hass, 10, self.poll_device_state)
 
     def mute_subscription_for_a_while(self) -> None:
         """Mute subscription for a while to avoid state bouncing."""
