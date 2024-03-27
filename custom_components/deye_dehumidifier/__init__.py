@@ -1,18 +1,21 @@
 """The Deye Dehumidifier integration."""
 
 from __future__ import annotations
+from datetime import datetime
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, CALLBACK_TYPE, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, Entity
+from homeassistant.helpers.event import async_call_later
 from libdeye.cloud_api import (
     DeyeCloudApi,
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
 )
+from libdeye.const import QUERY_DEVICE_STATE_COMMAND
 from libdeye.device_state_command import DeyeDeviceCommand, DeyeDeviceState
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
@@ -115,6 +118,7 @@ class DeyeEntity(Entity):
             name=self._device["device_name"],
         )
         self._attr_should_poll = False
+        self.subscription_muted: CALLBACK_TYPE | None = None
         # payload from the server sometimes are not a valid string
         if isinstance(self._device["payload"], str):
             self.device_state = DeyeDeviceState(self._device["payload"])
@@ -125,11 +129,15 @@ class DeyeEntity(Entity):
 
     def update_device_availability(self, available: bool) -> None:
         """Will be called when received new availability status."""
+        if self.subscription_muted:
+            return
         self._attr_available = available
         self.async_write_ha_state()
 
     def update_device_state(self, state: DeyeDeviceState) -> None:
         """Will be called when received new DeyeDeviceState."""
+        if self.subscription_muted:
+            return
         self.device_state = state
         self.async_write_ha_state()
 
@@ -150,9 +158,22 @@ class DeyeEntity(Entity):
             )
         )
 
+
+    def mute_subscription_for_a_while(self) -> None:
+        """Mute subscription for a while to avoid state bouncing."""
+        if self.subscription_muted:
+            self.subscription_muted()
+
+        @callback
+        def unmute(now: datetime) -> None:
+            self.subscription_muted = None
+
+        self.subscription_muted = async_call_later(self.hass, 10, unmute)
+
     def publish_command(self, command: DeyeDeviceCommand) -> None:
         """Publish a MQTT command to this device."""
         self._mqtt_client.publish_command(
             self._device["product_id"], self._device["device_id"], command.bytes()
         )
         self.async_write_ha_state()
+        self.mute_subscription_for_a_while()
