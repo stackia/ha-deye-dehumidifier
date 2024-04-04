@@ -19,6 +19,7 @@
         }
       },
       "user": {
+        "description": "請輸入 _德業智能 app_ 的登入憑證",
         "data": {
           "username": "手機號碼",
           "password": "密碼"
@@ -27,6 +28,19 @@
     }
   },
   "entity": {
+    "humidifier": {
+      "dehumidifier": {
+        "state_attributes": {
+          "mode": {
+            "state": {
+              "manual": "手動",
+              "air_purifier": "清新",
+              "clothes_dryer": "乾衣"
+            }
+          }
+        }
+      }
+    },
     "sensor": {
       "temperature": {
         "name": "環境溫度"

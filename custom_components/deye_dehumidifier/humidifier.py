@@ -5,17 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.humidifier import (
-    MODE_AUTO,
-    MODE_NORMAL,
     HumidifierDeviceClass,
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.components.humidifier.const import (
-    MODE_BOOST,
-    MODE_COMFORT,
-    MODE_SLEEP,
-)
+from homeassistant.components.humidifier.const import MODE_AUTO, MODE_SLEEP
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -25,6 +19,10 @@ from libdeye.utils import get_product_feature_config
 
 from . import DeyeEntity
 from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
+
+MODE_MANUAL = "manual"
+MODE_AIR_PURIFIER = "air_purifier"
+MODE_CLOTHES_DRYER = "clothes_dryer"
 
 
 async def async_setup_entry(
@@ -42,6 +40,7 @@ async def async_setup_entry(
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     """Dehumidifier entity."""
 
+    _attr_translation_key = "dehumidifier"
     _attr_device_class = HumidifierDeviceClass.DEHUMIDIFIER
     _attr_name = None  # Inherits from device name
 
@@ -124,21 +123,21 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 def deye_mode_to_hass_mode(mode: DeyeDeviceMode) -> str:
     """Map DeyeDeviceMode to HumidifierEntity mode."""
     if mode == DeyeDeviceMode.CLOTHES_DRYER_MODE:
-        return MODE_BOOST
+        return MODE_CLOTHES_DRYER
     if mode == DeyeDeviceMode.AIR_PURIFIER_MODE:
-        return MODE_COMFORT
+        return MODE_AIR_PURIFIER
     if mode == DeyeDeviceMode.AUTO_MODE:
         return MODE_AUTO
     if mode == DeyeDeviceMode.SLEEP_MODE:
         return MODE_SLEEP
-    return MODE_NORMAL
+    return MODE_MANUAL
 
 
 def hass_mode_to_deye_mode(mode: str) -> DeyeDeviceMode:
     """Map HumidifierEntity mode to DeyeDeviceMode."""
-    if mode == MODE_BOOST:
+    if mode == MODE_CLOTHES_DRYER:
         return DeyeDeviceMode.CLOTHES_DRYER_MODE
-    if mode == MODE_COMFORT:
+    if mode == MODE_AIR_PURIFIER:
         return DeyeDeviceMode.AIR_PURIFIER_MODE
     if mode == MODE_AUTO:
         return DeyeDeviceMode.AUTO_MODE

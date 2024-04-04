@@ -19,6 +19,7 @@
         }
       },
       "user": {
+        "description": "Por favor, insira suas credenciais de login do aplicativo _Deye Smart_",
         "data": {
           "username": "Número de telefone",
           "password": "Senha"
@@ -27,6 +28,19 @@
     }
   },
   "entity": {
+    "humidifier": {
+      "dehumidifier": {
+        "state_attributes": {
+          "mode": {
+            "state": {
+              "manual": "Manual",
+              "air_purifier": "Purificador de ar",
+              "clothes_dryer": "Secador de roupas"
+            }
+          }
+        }
+      }
+    },
     "sensor": {
       "temperature": {
         "name": "Temperatura"
