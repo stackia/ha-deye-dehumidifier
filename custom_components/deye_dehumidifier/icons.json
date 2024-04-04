@@ -1,0 +1,51 @@
+{
+  "entity": {
+    "humidifier": {
+      "dehumidifier": {
+        "state_attributes": {
+          "mode": {
+            "state": {
+              "manual": "mdi:cursor-pointer",
+              "air_purifier": "mdi:air-purifier",
+              "clothes_dryer": "mdi:hanger"
+            }
+          }
+        }
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "default": "mdi:baby-carriage",
+        "state": {
+          "off": "mdi:baby-carriage-off"
+        }
+      },
+      "anion": {
+        "default": "mdi:atom",
+        "state": {
+          "off": "mdi:atom-variant"
+        }
+      },
+      "water_pump": {
+        "default": "mdi:water-pump",
+        "state": {
+          "off": "mdi:water-pump-off"
+        }
+      }
+    },
+    "binary_sensor": {
+      "water_tank": {
+        "default": "mdi:beer",
+        "state": {
+          "off": "mdi:beer-outline"
+        }
+      },
+      "defrosting": {
+        "default": "mdi:snowflake-melt",
+        "state": {
+          "off": "mdi:snowflake-check"
+        }
+      }
+    }
+  }
+}

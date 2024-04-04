@@ -55,11 +55,6 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
         """Return true if the water tank is full."""
         return self.device_state.water_tank_full
 
-    @property
-    def icon(self) -> str:
-        """Return the icon based on the water tank state."""
-        return "mdi:beer" if self.device_state.water_tank_full else "mdi:beer-outline"
-
 
 class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
     """Defrosting binary entity."""
@@ -81,12 +76,3 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         """Return true if the device is defrosting."""
         return self.device_state.defrosting
-
-    @property
-    def icon(self) -> str:
-        """Return the icon based on the defrosting state."""
-        return (
-            "mdi:snowflake-melt"
-            if self.device_state.defrosting
-            else "mdi:snowflake-check"
-        )

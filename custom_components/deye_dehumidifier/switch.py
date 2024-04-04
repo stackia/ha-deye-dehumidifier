@@ -40,7 +40,6 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
     _attr_translation_key = "child_lock"
     _attr_device_class = SwitchDeviceClass.SWITCH
     _attr_entity_category = EntityCategory.CONFIG
-    _attr_icon = "mdi:teddy-bear"
 
     def __init__(
         self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
@@ -73,7 +72,6 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
     _attr_translation_key = "anion"
     _attr_device_class = SwitchDeviceClass.SWITCH
     _attr_entity_category = EntityCategory.CONFIG
-    _attr_icon = "mdi:atom"
 
     def __init__(
         self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
@@ -120,15 +118,6 @@ class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
     def is_on(self) -> bool:
         """Return True if the water pump switch is on."""
         return self.device_state.water_pump_switch
-
-    @property
-    def icon(self) -> str:
-        """Return the icon based on the water pump switch state."""
-        return (
-            "mdi:water-pump"
-            if self.device_state.water_pump_switch
-            else "mdi:water-pump-off"
-        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water pump on."""
