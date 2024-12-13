@@ -17,8 +17,9 @@ from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
 from libdeye.utils import get_product_feature_config
 
+from libdeye.cloud_api import DeyeCloudApi
 from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
+from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
 
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
@@ -34,7 +35,7 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
 
     for device in data[DATA_DEVICE_LIST]:
-        async_add_entities([DeyeDehumidifier(device, data[DATA_MQTT_CLIENT])])
+        async_add_entities([DeyeDehumidifier(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])])
 
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
@@ -45,10 +46,10 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     _attr_name = None  # Inherits from device name
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
+        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
     ) -> None:
         """Initialize the humidifier entity."""
-        super().__init__(device, mqtt_client)
+        super().__init__(device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-dehumidifier"
         self.entity_id = f"humidifier.{self.entity_id_base}_dehumidifier"
@@ -102,22 +103,22 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     async def async_set_mode(self, mode: str) -> None:
         """Set new working mode."""
         self.device_state.mode = hass_mode_to_deye_mode(mode)
-        self.publish_command(self.device_state.to_command())
+        await self.publish_command(self.device_state.to_command())
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
         self.device_state.target_humidity = humidity
-        self.publish_command(self.device_state.to_command())
+        await self.publish_command(self.device_state.to_command())
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the device on."""
         self.device_state.power_switch = True
-        self.publish_command(self.device_state.to_command())
+        await self.publish_command(self.device_state.to_command())
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
         self.device_state.power_switch = False
-        self.publish_command(self.device_state.to_command())
+        await self.publish_command(self.device_state.to_command())
 
 
 def deye_mode_to_hass_mode(mode: DeyeDeviceMode) -> str:

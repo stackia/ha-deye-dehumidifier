@@ -16,8 +16,9 @@ from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeFanSpeed
 from libdeye.utils import get_product_feature_config
 
+from libdeye.cloud_api import DeyeCloudApi
 from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
+from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
 
 
 async def async_setup_entry(
@@ -31,7 +32,7 @@ async def async_setup_entry(
     for device in data[DATA_DEVICE_LIST]:
         feature_config = get_product_feature_config(device["product_id"])
         if len(feature_config["fan_speed"]) > 0:
-            async_add_entities([DeyeFan(device, data[DATA_MQTT_CLIENT])])
+            async_add_entities([DeyeFan(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])])
 
 
 class DeyeFan(DeyeEntity, FanEntity):
@@ -40,10 +41,10 @@ class DeyeFan(DeyeEntity, FanEntity):
     _attr_translation_key = "fan"
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
+        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
     ) -> None:
         """Initialize the fan entity."""
-        super().__init__(device, mqtt_client)
+        super().__init__(device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-fan"
         self.entity_id = f"fan.{self.entity_id_base}_fan"
@@ -76,7 +77,7 @@ class DeyeFan(DeyeEntity, FanEntity):
     async def async_oscillate(self, oscillating: bool) -> None:
         """Oscillate the fan."""
         self.device_state.oscillating_switch = oscillating
-        self.publish_command(self.device_state.to_command())
+        await self.publish_command(self.device_state.to_command())
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
@@ -85,7 +86,7 @@ class DeyeFan(DeyeEntity, FanEntity):
         self.device_state.fan_speed = percentage_to_ordered_list_item(
             self._named_fan_speeds, percentage
         )
-        self.publish_command(self.device_state.to_command())
+        await self.publish_command(self.device_state.to_command())
 
     async def async_turn_on(
         self,
@@ -99,9 +100,9 @@ class DeyeFan(DeyeEntity, FanEntity):
             self.device_state.fan_speed = percentage_to_ordered_list_item(
                 self._named_fan_speeds, percentage
             )
-        self.publish_command(self.device_state.to_command())
+        await self.publish_command(self.device_state.to_command())
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         self.device_state.power_switch = False
-        self.publish_command(self.device_state.to_command())
+        await self.publish_command(self.device_state.to_command())
