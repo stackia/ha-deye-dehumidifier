@@ -57,7 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data[CONF_AUTH_TOKEN],
         )
         cloud_api.on_auth_token_refreshed = on_auth_token_refreshed
-        mqtt_info = await cloud_api.get_mqtt_info()
+        mqtt_info = await cloud_api.get_deye_platform_mqtt_info()
         mqtt_client = DeyeMqttClient(
             mqtt_info["mqtthost"],
             mqtt_info["sslport"],
@@ -103,11 +103,15 @@ class DeyeEntity(Entity):
     """Initiate Deye Base Class."""
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the instance."""
         self._device = device
         self._mqtt_client = mqtt_client
+        self._cloud_api = cloud_api
         self._attr_has_entity_name = True
         self._attr_available = self._device["online"]
         self._attr_unique_id = self._device["mac"]
@@ -144,34 +148,44 @@ class DeyeEntity(Entity):
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to Home Assistant."""
-        self.async_on_remove(
-            self._mqtt_client.subscribe_availability_change(
-                self._device["product_id"],
-                self._device["device_id"],
-                self.update_device_availability,
+        if self._device["platform"] == 1:
+            self.async_on_remove(
+                self._mqtt_client.subscribe_availability_change(
+                    self._device["product_id"],
+                    self._device["device_id"],
+                    self.update_device_availability,
+                )
             )
-        )
-        self.async_on_remove(
-            self._mqtt_client.subscribe_state_change(
-                self._device["product_id"],
-                self._device["device_id"],
-                self.update_device_state,
+            self.async_on_remove(
+                self._mqtt_client.subscribe_state_change(
+                    self._device["product_id"],
+                    self._device["device_id"],
+                    self.update_device_state,
+                )
             )
-        )
-        self.poll_device_state()
+
+        await self.poll_device_state()
         self.async_on_remove(self.cancel_polling)
 
     @callback
-    def poll_device_state(self, now: datetime | None = None) -> None:
+    async def poll_device_state(self, now: datetime | None = None) -> None:
         """
         Some Deye devices have a very long heartbeat period. So polling is still necessary to get the latest state as
         quickly as possible.
         """
-        self._mqtt_client.publish_command(
-            self._device["product_id"],
-            self._device["device_id"],
-            QUERY_DEVICE_STATE_COMMAND,
-        )
+        if self._device["platform"] == 1:
+            self._mqtt_client.publish_command(
+                self._device["product_id"],
+                self._device["device_id"],
+                QUERY_DEVICE_STATE_COMMAND,
+            )
+        elif self._device["platform"] == 2:
+            state = DeyeDeviceState(
+                await self._cloud_api.get_fog_platform_device_properties(
+                    self._device["device_id"]
+                )
+            )
+            self.update_device_state(state)
         self.cancel_polling = async_call_later(self.hass, 10, self.poll_device_state)
 
     def mute_subscription_for_a_while(self) -> None:
@@ -185,10 +199,16 @@ class DeyeEntity(Entity):
 
         self.subscription_muted = async_call_later(self.hass, 10, unmute)
 
-    def publish_command(self, command: DeyeDeviceCommand) -> None:
-        """Publish a MQTT command to this device."""
-        self._mqtt_client.publish_command(
-            self._device["product_id"], self._device["device_id"], command.bytes()
-        )
+    async def publish_command(self, command: DeyeDeviceCommand) -> None:
+        if self._device["platform"] == 1:
+            """Publish a MQTT command to this device."""
+            self._mqtt_client.publish_command(
+                self._device["product_id"], self._device["device_id"], command.bytes()
+            )
+        elif self._device["platform"] == 2:
+            """Publish a MQTT command to this device."""
+            await self._cloud_api.set_fog_platform_device_properties(
+                self._device["device_id"], command.json()
+            )
         self.async_write_ha_state()
         self.mute_subscription_for_a_while()

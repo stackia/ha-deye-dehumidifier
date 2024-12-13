@@ -10,11 +10,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from libdeye.cloud_api import DeyeCloudApi
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
 
 from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
+from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
 
 
 async def async_setup_entry(
@@ -28,8 +29,12 @@ async def async_setup_entry(
     for device in data[DATA_DEVICE_LIST]:
         async_add_entities(
             [
-                DeyeWaterTankBinarySensor(device, data[DATA_MQTT_CLIENT]),
-                DeyeDefrostingBinarySensor(device, data[DATA_MQTT_CLIENT]),
+                DeyeWaterTankBinarySensor(
+                    device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+                ),
+                DeyeDefrostingBinarySensor(
+                    device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+                ),
             ]
         )
 
@@ -42,10 +47,13 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(device, mqtt_client)
+        super().__init__(device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-water-tank"
         self.entity_id = f"binary_sensor.{self.entity_id_base}_water_tank"
@@ -64,10 +72,13 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(device, mqtt_client)
+        super().__init__(device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-defrosting"
         self.entity_id = f"binary_sensor.{self.entity_id_base}_defrosting"
