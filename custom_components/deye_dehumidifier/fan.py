@@ -12,13 +12,13 @@ from homeassistant.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
+from libdeye.cloud_api import DeyeCloudApi
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeFanSpeed
 from libdeye.utils import get_product_feature_config
 
-from libdeye.cloud_api import DeyeCloudApi
 from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
+from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
 
 
 async def async_setup_entry(
@@ -32,7 +32,9 @@ async def async_setup_entry(
     for device in data[DATA_DEVICE_LIST]:
         feature_config = get_product_feature_config(device["product_id"])
         if len(feature_config["fan_speed"]) > 0:
-            async_add_entities([DeyeFan(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])])
+            async_add_entities(
+                [DeyeFan(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])]
+            )
 
 
 class DeyeFan(DeyeEntity, FanEntity):
@@ -41,7 +43,10 @@ class DeyeFan(DeyeEntity, FanEntity):
     _attr_translation_key = "fan"
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the fan entity."""
         super().__init__(device, mqtt_client, cloud_api)

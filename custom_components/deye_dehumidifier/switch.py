@@ -9,13 +9,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from libdeye.cloud_api import DeyeCloudApi
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
 from libdeye.utils import get_product_feature_config
 
-from libdeye.cloud_api import DeyeCloudApi
 from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
+from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
 
 
 async def async_setup_entry(
@@ -27,12 +27,22 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
 
     for device in data[DATA_DEVICE_LIST]:
-        async_add_entities([DeyeChildLockSwitch(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])])
+        async_add_entities(
+            [DeyeChildLockSwitch(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])]
+        )
         feature_config = get_product_feature_config(device["product_id"])
         if feature_config["anion"]:
-            async_add_entities([DeyeAnionSwitch(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])])
+            async_add_entities(
+                [DeyeAnionSwitch(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])]
+            )
         if feature_config["water_pump"]:
-            async_add_entities([DeyeWaterPumpSwitch(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])])
+            async_add_entities(
+                [
+                    DeyeWaterPumpSwitch(
+                        device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+                    )
+                ]
+            )
 
 
 class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
@@ -43,7 +53,10 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the switch."""
         super().__init__(device, mqtt_client, cloud_api)
@@ -75,7 +88,10 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the switch."""
         super().__init__(device, mqtt_client, cloud_api)
@@ -107,7 +123,10 @@ class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the switch."""
         super().__init__(device, mqtt_client, cloud_api)

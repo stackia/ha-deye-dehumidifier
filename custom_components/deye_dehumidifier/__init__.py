@@ -103,7 +103,10 @@ class DeyeEntity(Entity):
     """Initiate Deye Base Class."""
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the instance."""
         self._device = device
@@ -177,7 +180,11 @@ class DeyeEntity(Entity):
                 QUERY_DEVICE_STATE_COMMAND,
             )
         elif self._device["platform"] == 2:
-            state = DeyeDeviceState(await self._cloud_api.get_fog_platform_device_properties(self._device["device_id"]))
+            state = DeyeDeviceState(
+                await self._cloud_api.get_fog_platform_device_properties(
+                    self._device["device_id"]
+                )
+            )
             self.update_device_state(state)
         self.cancel_polling = async_call_later(self.hass, 10, self.poll_device_state)
 
@@ -200,6 +207,8 @@ class DeyeEntity(Entity):
             )
         elif self._device["platform"] == 2:
             """Publish a MQTT command to this device."""
-            await self._cloud_api.set_fog_platform_device_properties(self._device["device_id"], command.json())
+            await self._cloud_api.set_fog_platform_device_properties(
+                self._device["device_id"], command.json()
+            )
         self.async_write_ha_state()
         self.mute_subscription_for_a_while()

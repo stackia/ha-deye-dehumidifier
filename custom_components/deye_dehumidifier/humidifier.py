@@ -13,13 +13,13 @@ from homeassistant.components.humidifier.const import MODE_AUTO, MODE_SLEEP
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from libdeye.cloud_api import DeyeCloudApi
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
 from libdeye.utils import get_product_feature_config
 
-from libdeye.cloud_api import DeyeCloudApi
 from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
+from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
 
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
@@ -35,7 +35,9 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
 
     for device in data[DATA_DEVICE_LIST]:
-        async_add_entities([DeyeDehumidifier(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])])
+        async_add_entities(
+            [DeyeDehumidifier(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])]
+        )
 
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
@@ -46,7 +48,10 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     _attr_name = None  # Inherits from device name
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the humidifier entity."""
         super().__init__(device, mqtt_client, cloud_api)
