@@ -2,21 +2,24 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
 from libdeye.utils import get_product_feature_config
 
 from libdeye.cloud_api import DeyeCloudApi
-from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
 
+from . import DeyeEntity, DeyeDataUpdateCoordinator
+from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN, DATA_COORDINATOR
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -59,12 +62,12 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the child lock on."""
         self.device_state.child_lock_switch = True
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async('child_lock_switch', True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the child lock off."""
         self.device_state.child_lock_switch = False
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async('child_lock_switch', False)
 
 
 class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
@@ -91,12 +94,12 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the anion switch on."""
         self.device_state.anion_switch = True
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async('anion_switch', True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the anion switch off."""
         self.device_state.anion_switch = False
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async('anion_switch', False)
 
 
 class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
@@ -123,9 +126,9 @@ class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water pump on."""
         self.device_state.water_pump_switch = True
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async('water_pump_switch', True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the water pump off."""
         self.device_state.water_pump_switch = False
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async('water_pump_switch', False)

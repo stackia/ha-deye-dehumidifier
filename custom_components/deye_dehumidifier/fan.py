@@ -17,8 +17,8 @@ from libdeye.types import DeyeApiResponseDeviceInfo, DeyeFanSpeed
 from libdeye.utils import get_product_feature_config
 
 from libdeye.cloud_api import DeyeCloudApi
-from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
+from . import DeyeEntity, DeyeDataUpdateCoordinator
+from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN, DATA_COORDINATOR
 
 
 async def async_setup_entry(
@@ -77,16 +77,17 @@ class DeyeFan(DeyeEntity, FanEntity):
     async def async_oscillate(self, oscillating: bool) -> None:
         """Oscillate the fan."""
         self.device_state.oscillating_switch = oscillating
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async('oscillating_switch', oscillating)
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
         if percentage == 0:
             await self.async_turn_off()
-        self.device_state.fan_speed = percentage_to_ordered_list_item(
+        fan_speed = int(percentage_to_ordered_list_item(
             self._named_fan_speeds, percentage
-        )
-        await self.publish_command(self.device_state.to_command())
+        ))
+        self.device_state.fan_speed = fan_speed
+        await self.publish_command_async('fan_speed', fan_speed)
 
     async def async_turn_on(
         self,
@@ -96,13 +97,13 @@ class DeyeFan(DeyeEntity, FanEntity):
     ) -> None:
         """Turn on the fan."""
         self.device_state.power_switch = True
+        await self.publish_command_async('power_switch', True)
         if percentage is not None:
-            self.device_state.fan_speed = percentage_to_ordered_list_item(
-                self._named_fan_speeds, percentage
-            )
-        await self.publish_command(self.device_state.to_command())
+            fan_speed = int(percentage_to_ordered_list_item(self._named_fan_speeds, percentage))
+            self.device_state.fan_speed = fan_speed
+            await self.publish_command_async('fan_speed', fan_speed)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         self.device_state.power_switch = False
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async('power_switch', False)
