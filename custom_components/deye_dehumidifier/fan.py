@@ -55,6 +55,10 @@ class DeyeFan(DeyeEntity, FanEntity):
         self.entity_id = f"fan.{self.entity_id_base}_fan"
         feature_config = get_product_feature_config(device["product_id"])
         self._attr_supported_features = FanEntityFeature.SET_SPEED
+        if hasattr(FanEntityFeature, "TURN_ON"):  # v2024.8
+            self._attr_supported_features |= FanEntityFeature.TURN_ON
+        if hasattr(FanEntityFeature, "TURN_OFF"):
+            self._attr_supported_features |= FanEntityFeature.TURN_OFF
         if feature_config["oscillating"]:
             self._attr_supported_features |= FanEntityFeature.OSCILLATE
         self._named_fan_speeds = feature_config["fan_speed"]
@@ -82,16 +86,17 @@ class DeyeFan(DeyeEntity, FanEntity):
     async def async_oscillate(self, oscillating: bool) -> None:
         """Oscillate the fan."""
         self.device_state.oscillating_switch = oscillating
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async("oscillating_switch", oscillating)
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
         if percentage == 0:
             await self.async_turn_off()
-        self.device_state.fan_speed = percentage_to_ordered_list_item(
-            self._named_fan_speeds, percentage
+        fan_speed = int(
+            percentage_to_ordered_list_item(self._named_fan_speeds, percentage)
         )
-        await self.publish_command(self.device_state.to_command())
+        self.device_state.fan_speed = fan_speed
+        await self.publish_command_async("fan_speed", fan_speed)
 
     async def async_turn_on(
         self,
@@ -101,13 +106,15 @@ class DeyeFan(DeyeEntity, FanEntity):
     ) -> None:
         """Turn on the fan."""
         self.device_state.power_switch = True
+        await self.publish_command_async("power_switch", True)
         if percentage is not None:
-            self.device_state.fan_speed = percentage_to_ordered_list_item(
-                self._named_fan_speeds, percentage
+            fan_speed = int(
+                percentage_to_ordered_list_item(self._named_fan_speeds, percentage)
             )
-        await self.publish_command(self.device_state.to_command())
+            self.device_state.fan_speed = fan_speed
+            await self.publish_command_async("fan_speed", fan_speed)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         self.device_state.power_switch = False
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async("power_switch", False)

@@ -72,12 +72,12 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the child lock on."""
         self.device_state.child_lock_switch = True
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async("child_lock_switch", True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the child lock off."""
         self.device_state.child_lock_switch = False
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async("child_lock_switch", False)
 
 
 class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
@@ -107,12 +107,12 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the anion switch on."""
         self.device_state.anion_switch = True
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async("anion_switch", True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the anion switch off."""
         self.device_state.anion_switch = False
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async("anion_switch", False)
 
 
 class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
@@ -142,9 +142,9 @@ class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water pump on."""
         self.device_state.water_pump_switch = True
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async("water_pump_switch", True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the water pump off."""
         self.device_state.water_pump_switch = False
-        await self.publish_command(self.device_state.to_command())
+        await self.publish_command_async("water_pump_switch", False)

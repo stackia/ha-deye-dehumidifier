@@ -2,22 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, Entity
-from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from libdeye.cloud_api import (
     DeyeCloudApi,
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
 )
-from libdeye.const import QUERY_DEVICE_STATE_COMMAND
-from libdeye.device_state_command import DeyeDeviceCommand, DeyeDeviceState
+from libdeye.device_state_command import DeyeDeviceState
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
 
@@ -26,11 +23,13 @@ from .const import (
     CONF_PASSWORD,
     CONF_USERNAME,
     DATA_CLOUD_API,
+    DATA_COORDINATOR,
     DATA_DEVICE_LIST,
     DATA_MQTT_CLIENT,
     DOMAIN,
     MANUFACTURER,
 )
+from .data_coordinator import DeyeDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
     Platform.HUMIDIFIER,
@@ -72,6 +71,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 await cloud_api.get_device_list(),
             )
         )
+        for device in device_list:
+            coordinator = DeyeDataUpdateCoordinator(
+                hass, device, mqtt_client, cloud_api
+            )
+            device[DATA_COORDINATOR] = coordinator
+            await device[DATA_COORDINATOR].async_config_entry_first_refresh()
+
     except DeyeCloudApiInvalidAuthError as err:
         raise ConfigEntryAuthFailed from err
     except DeyeCloudApiCannotConnectError as err:
@@ -99,7 +105,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-class DeyeEntity(Entity):
+class DeyeEntity(CoordinatorEntity, Entity):
     """Initiate Deye Base Class."""
 
     def __init__(
@@ -109,11 +115,13 @@ class DeyeEntity(Entity):
         cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the instance."""
+        self.coordinator = device[DATA_COORDINATOR]
+        super().__init__(self.coordinator)
         self._device = device
         self._mqtt_client = mqtt_client
         self._cloud_api = cloud_api
         self._attr_has_entity_name = True
-        self._attr_available = self._device["online"]
+        self._device_available = self._device["online"]
         self._attr_unique_id = self._device["mac"]
         self.entity_id_base = f'deye_{self._device["mac"].lower()}'  # We will override HA generated entity ID
         self._attr_device_info = DeviceInfo(
@@ -123,7 +131,6 @@ class DeyeEntity(Entity):
             name=self._device["device_name"],
         )
         self._attr_should_poll = False
-        self.subscription_muted: CALLBACK_TYPE | None = None
         # payload from the server sometimes are not a valid string
         if isinstance(self._device["payload"], str):
             self.device_state = DeyeDeviceState(self._device["payload"])
@@ -131,84 +138,26 @@ class DeyeEntity(Entity):
             self.device_state = DeyeDeviceState(
                 "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
             )
+        remove_handle = self.coordinator.async_add_listener(
+            self._handle_coordinator_update
+        )
+        self.async_on_remove(remove_handle)
 
-    def update_device_availability(self, available: bool) -> None:
-        """Will be called when received new availability status."""
-        if self.subscription_muted:
-            return
-        self._attr_available = available
+    async def publish_command_async(self, attribute, value):
+        """Push command to a queue and deal with them together."""
         self.async_write_ha_state()
+        self.hass.bus.fire(
+            "call_humidifier_method", {"prop": attribute, "value": value}
+        )
+        await self.coordinator.async_request_refresh()
 
-    def update_device_state(self, state: DeyeDeviceState) -> None:
-        """Will be called when received new DeyeDeviceState."""
-        if self.subscription_muted:
-            return
-        self.device_state = state
-        self.async_write_ha_state()
-
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
-        if self._device["platform"] == 1:
-            self.async_on_remove(
-                self._mqtt_client.subscribe_availability_change(
-                    self._device["product_id"],
-                    self._device["device_id"],
-                    self.update_device_availability,
-                )
-            )
-            self.async_on_remove(
-                self._mqtt_client.subscribe_state_change(
-                    self._device["product_id"],
-                    self._device["device_id"],
-                    self.update_device_state,
-                )
-            )
-
-        await self.poll_device_state()
-        self.async_on_remove(self.cancel_polling)
+    @property
+    def available(self):
+        return self._device_available
 
     @callback
-    async def poll_device_state(self, now: datetime | None = None) -> None:
-        """
-        Some Deye devices have a very long heartbeat period. So polling is still necessary to get the latest state as
-        quickly as possible.
-        """
-        if self._device["platform"] == 1:
-            self._mqtt_client.publish_command(
-                self._device["product_id"],
-                self._device["device_id"],
-                QUERY_DEVICE_STATE_COMMAND,
-            )
-        elif self._device["platform"] == 2:
-            state = DeyeDeviceState(
-                await self._cloud_api.get_fog_platform_device_properties(
-                    self._device["device_id"]
-                )
-            )
-            self.update_device_state(state)
-        self.cancel_polling = async_call_later(self.hass, 10, self.poll_device_state)
-
-    def mute_subscription_for_a_while(self) -> None:
-        """Mute subscription for a while to avoid state bouncing."""
-        if self.subscription_muted:
-            self.subscription_muted()
-
-        @callback
-        def unmute(now: datetime) -> None:
-            self.subscription_muted = None
-
-        self.subscription_muted = async_call_later(self.hass, 10, unmute)
-
-    async def publish_command(self, command: DeyeDeviceCommand) -> None:
-        if self._device["platform"] == 1:
-            """Publish a MQTT command to this device."""
-            self._mqtt_client.publish_command(
-                self._device["product_id"], self._device["device_id"], command.bytes()
-            )
-        elif self._device["platform"] == 2:
-            """Publish a MQTT command to this device."""
-            await self._cloud_api.set_fog_platform_device_properties(
-                self._device["device_id"], command.json()
-            )
-        self.async_write_ha_state()
-        self.mute_subscription_for_a_while()
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.device_state = self.coordinator.data
+        self._device_available = self.coordinator.device_available
+        super()._handle_coordinator_update()
