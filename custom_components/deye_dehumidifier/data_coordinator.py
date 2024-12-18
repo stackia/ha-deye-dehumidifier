@@ -10,6 +10,7 @@ from libdeye.device_state_command import DeyeDeviceState
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, device, mqtt_client, cloud_api):
         super().__init__(

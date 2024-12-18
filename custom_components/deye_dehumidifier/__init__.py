@@ -14,22 +14,22 @@ from libdeye.cloud_api import (
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
 )
-
 from libdeye.device_state_command import DeyeDeviceState
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
-from .data_coordinator import DeyeDataUpdateCoordinator
+
 from .const import (
     CONF_AUTH_TOKEN,
     CONF_PASSWORD,
     CONF_USERNAME,
     DATA_CLOUD_API,
+    DATA_COORDINATOR,
     DATA_DEVICE_LIST,
     DATA_MQTT_CLIENT,
-    DATA_COORDINATOR,
     DOMAIN,
     MANUFACTURER,
 )
+from .data_coordinator import DeyeDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
     Platform.HUMIDIFIER,
@@ -72,7 +72,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         )
         for device in device_list:
-            coordinator = DeyeDataUpdateCoordinator(hass, device, mqtt_client, cloud_api)
+            coordinator = DeyeDataUpdateCoordinator(
+                hass, device, mqtt_client, cloud_api
+            )
             device[DATA_COORDINATOR] = coordinator
             await device[DATA_COORDINATOR].async_config_entry_first_refresh()
 
@@ -107,7 +109,10 @@ class DeyeEntity(CoordinatorEntity, Entity):
     """Initiate Deye Base Class."""
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the instance."""
         self.coordinator = device[DATA_COORDINATOR]
@@ -133,13 +138,17 @@ class DeyeEntity(CoordinatorEntity, Entity):
             self.device_state = DeyeDeviceState(
                 "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
             )
-        remove_handle = self.coordinator.async_add_listener(self._handle_coordinator_update)
+        remove_handle = self.coordinator.async_add_listener(
+            self._handle_coordinator_update
+        )
         self.async_on_remove(remove_handle)
 
     async def publish_command_async(self, attribute, value):
         """Push command to a queue and deal with them together."""
         self.async_write_ha_state()
-        self.hass.bus.fire('call_humidifier_method', {'prop': attribute, 'value': value})
+        self.hass.bus.fire(
+            "call_humidifier_method", {"prop": attribute, "value": value}
+        )
         await self.coordinator.async_request_refresh()
 
     @property
@@ -152,4 +161,3 @@ class DeyeEntity(CoordinatorEntity, Entity):
         self.device_state = self.coordinator.data
         self._device_available = self.coordinator.device_available
         super()._handle_coordinator_update()
-
