@@ -1,12 +1,12 @@
 import asyncio
 import logging
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
+from homeassistant.core import CALLBACK_TYPE, callback
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.core import CALLBACK_TYPE, callback
-from libdeye.device_state_command import DeyeDeviceState
 from libdeye.const import QUERY_DEVICE_STATE_COMMAND
+from libdeye.device_state_command import DeyeDeviceState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +75,8 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
 
         device_list = list(
             filter(
-                lambda d: d["product_type"] == "dehumidifier" and d["device_id"] == self._device["device_id"],
+                lambda d: d["product_type"] == "dehumidifier"
+                and d["device_id"] == self._device["device_id"],
                 await self._cloud_api.get_device_list(),
             )
         )
@@ -89,10 +90,16 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
                 self._device["device_id"],
                 QUERY_DEVICE_STATE_COMMAND,
             )
-            response = await asyncio.wait_for(self.receive_queue.get(), timeout=10)  # 设置超时时间
-            #_LOGGER.error(response.to_command().json())
+            response = await asyncio.wait_for(
+                self.receive_queue.get(), timeout=10
+            )  # 设置超时时间
+            # _LOGGER.error(response.to_command().json())
             return response
         elif self._device["platform"] == 2:
-            response = DeyeDeviceState(await self._cloud_api.get_fog_platform_device_properties(self._device["device_id"]))
+            response = DeyeDeviceState(
+                await self._cloud_api.get_fog_platform_device_properties(
+                    self._device["device_id"]
+                )
+            )
             # _LOGGER.error(response.to_command().json())
             return response

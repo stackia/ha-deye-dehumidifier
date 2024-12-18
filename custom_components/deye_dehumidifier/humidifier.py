@@ -12,17 +12,16 @@ from homeassistant.components.humidifier import (
 )
 from homeassistant.components.humidifier.const import MODE_AUTO, MODE_SLEEP
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback, CALLBACK_TYPE
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from libdeye.cloud_api import DeyeCloudApi
+from libdeye.device_state_command import DeyeDeviceState
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
 from libdeye.utils import get_product_feature_config
 
-from libdeye.cloud_api import DeyeCloudApi
-
-from libdeye.device_state_command import DeyeDeviceState
 from . import DeyeEntity
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
+from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
 
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
@@ -38,15 +37,17 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
 
     for device in data[DATA_DEVICE_LIST]:
-        deye_dehumidifier = DeyeDehumidifier(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])
+        deye_dehumidifier = DeyeDehumidifier(
+            device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+        )
         async_add_entities([deye_dehumidifier])
 
         async def call_method(event):
-            prop = event.data.get('prop')
-            value = event.data.get('value')
+            prop = event.data.get("prop")
+            value = event.data.get("value")
             await deye_dehumidifier.publish_command(prop, value)
 
-        hass.bus.async_listen('call_humidifier_method', call_method)
+        hass.bus.async_listen("call_humidifier_method", call_method)
 
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
@@ -57,7 +58,10 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     _attr_name = None  # Inherits from device name
 
     def __init__(
-        self, device: DeyeApiResponseDeviceInfo, mqtt_client: DeyeMqttClient, cloud_api: DeyeCloudApi
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the humidifier entity."""
         super().__init__(device, mqtt_client, cloud_api)
@@ -74,14 +78,14 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         self._attr_min_humidity = feature_config["min_target_humidity"]
         self._attr_max_humidity = feature_config["max_target_humidity"]
         self._attr_entity_picture = device["product_icon"]
-        self.data_change_list : dict = dict()
+        self.data_change_list: dict = dict()
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         self.hass.helpers.event.async_track_time_interval(
             self.put_device_state, timedelta(seconds=5)
         )
-        
+
     @callback
     async def put_device_state(self, now: datetime | None = None) -> None:
         # _LOGGER.error(self.data_change_list)
@@ -93,11 +97,15 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
             if self._device["platform"] == 1:
                 """Publish a MQTT command to this device."""
                 self._mqtt_client.publish_command(
-                    self._device["product_id"], self._device["device_id"], command.bytes()
+                    self._device["product_id"],
+                    self._device["device_id"],
+                    command.bytes(),
                 )
             elif self._device["platform"] == 2:
                 """Post a Remote command to this device."""
-                await self._cloud_api.set_fog_platform_device_properties(self._device["device_id"], command.json())
+                await self._cloud_api.set_fog_platform_device_properties(
+                    self._device["device_id"], command.json()
+                )
 
             self.async_write_ha_state()
 
@@ -148,28 +156,31 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     async def async_set_mode(self, mode: str) -> None:
         """Set new working mode."""
         self.device_state.mode = hass_mode_to_deye_mode(mode)
-        await self.publish_command_async('mode', hass_mode_to_deye_mode(mode))
+        await self.publish_command_async("mode", hass_mode_to_deye_mode(mode))
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
         self.device_state.target_humidity = humidity
-        await self.publish_command_async('target_humidity', humidity)
+        await self.publish_command_async("target_humidity", humidity)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the device on."""
         self.device_state.power_switch = True
-        await self.publish_command_async('power_switch', True)
+        await self.publish_command_async("power_switch", True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
         self.device_state.power_switch = False
-        await self.publish_command_async('power_switch', False)
+        await self.publish_command_async("power_switch", False)
+
 
 def set_class_variable(obj, var_name, new_value):
     if hasattr(obj, var_name):
         setattr(obj, var_name, new_value)
     else:
-        raise AttributeError(f"'{obj.__class__.__name__}' object has no attribute '{var_name}'")
+        raise AttributeError(
+            f"'{obj.__class__.__name__}' object has no attribute '{var_name}'"
+        )
 
 
 def deye_mode_to_hass_mode(mode: DeyeDeviceMode) -> str:
