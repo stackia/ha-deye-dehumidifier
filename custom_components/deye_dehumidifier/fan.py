@@ -17,7 +17,7 @@ from libdeye.types import DeyeApiResponseDeviceInfo, DeyeFanSpeed
 from libdeye.utils import get_product_feature_config
 
 from libdeye.cloud_api import DeyeCloudApi
-from . import DeyeEntity, DeyeDataUpdateCoordinator
+from . import DeyeEntity
 from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN, DATA_COORDINATOR
 
 
@@ -50,6 +50,10 @@ class DeyeFan(DeyeEntity, FanEntity):
         self.entity_id = f"fan.{self.entity_id_base}_fan"
         feature_config = get_product_feature_config(device["product_id"])
         self._attr_supported_features = FanEntityFeature.SET_SPEED
+        if hasattr(FanEntityFeature, 'TURN_ON'):  # v2024.8
+            self._attr_supported_features |= FanEntityFeature.TURN_ON
+        if hasattr(FanEntityFeature, 'TURN_OFF'):
+            self._attr_supported_features |= FanEntityFeature.TURN_OFF
         if feature_config["oscillating"]:
             self._attr_supported_features |= FanEntityFeature.OSCILLATE
         self._named_fan_speeds = feature_config["fan_speed"]
