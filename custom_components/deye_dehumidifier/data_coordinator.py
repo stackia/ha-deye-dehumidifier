@@ -8,6 +8,7 @@ from homeassistant.core import CALLBACK_TYPE, callback
 from libdeye.device_state_command import DeyeDeviceState
 from libdeye.const import QUERY_DEVICE_STATE_COMMAND
 
+_LOGGER = logging.getLogger(__name__)
 
 class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, device, mqtt_client, cloud_api):

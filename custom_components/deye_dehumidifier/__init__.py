@@ -15,9 +15,9 @@ from libdeye.cloud_api import (
     DeyeCloudApiInvalidAuthError,
 )
 
-from libdeye.device_state_command import DeyeDeviceCommand, DeyeDeviceState
+from libdeye.device_state_command import DeyeDeviceState
 from libdeye.mqtt_client import DeyeMqttClient
-from libdeye.types import DeyeApiResponseDeviceInfo, DeyeFanSpeed, DeyeDeviceMode
+from libdeye.types import DeyeApiResponseDeviceInfo
 from .data_coordinator import DeyeDataUpdateCoordinator
 from .const import (
     CONF_AUTH_TOKEN,

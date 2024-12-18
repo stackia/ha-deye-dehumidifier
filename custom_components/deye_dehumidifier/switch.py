@@ -7,7 +7,7 @@ from typing import Any
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
@@ -15,8 +15,8 @@ from libdeye.utils import get_product_feature_config
 
 from libdeye.cloud_api import DeyeCloudApi
 
-from . import DeyeEntity, DeyeDataUpdateCoordinator
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN, DATA_COORDINATOR
+from . import DeyeEntity
+from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
 
 async def async_setup_entry(
     hass: HomeAssistant,
