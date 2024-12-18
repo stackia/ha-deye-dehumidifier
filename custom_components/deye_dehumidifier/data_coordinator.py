@@ -91,9 +91,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
                 self._device["device_id"],
                 QUERY_DEVICE_STATE_COMMAND,
             )
-            response = await asyncio.wait_for(
-                self.receive_queue.get(), timeout=10
-            )
+            response = await asyncio.wait_for(self.receive_queue.get(), timeout=10)
             return response
         elif self._device["platform"] == 2:
             response = DeyeDeviceState(

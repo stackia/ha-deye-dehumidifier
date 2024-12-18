@@ -11,10 +11,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from libdeye.cloud_api import DeyeCloudApi
 from libdeye.mqtt_client import DeyeMqttClient
-from libdeye.types import DeyeApiResponseDeviceInfo
+from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
 from libdeye.utils import get_product_feature_config
 
-from libdeye.types import DeyeDeviceMode
 from . import DeyeEntity
 from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
 
@@ -175,7 +174,9 @@ class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
 
     @property
     def available(self):
-        return super().available and self.device_state.mode == DeyeDeviceMode.MANUAL_MODE
+        return (
+            super().available and self.device_state.mode == DeyeDeviceMode.MANUAL_MODE
+        )
 
     @property
     def is_on(self) -> bool:
