@@ -4,11 +4,9 @@ from datetime import timedelta, datetime
 
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, callback
 from libdeye.device_state_command import DeyeDeviceState
 from libdeye.const import QUERY_DEVICE_STATE_COMMAND
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
@@ -28,14 +26,14 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
             "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
         )
         self._device = device
+        self.device_available = self._device["online"]
         """When entity is added to Home Assistant."""
         if self._device["platform"] == 1:
-
-            self._mqtt_client.subscribe_availability_change(
-                self._device["product_id"],
-                self._device["device_id"],
-                self.update_device_availability,
-            )
+            # self._mqtt_client.subscribe_availability_change(
+            #     self._device["product_id"],
+            #     self._device["device_id"],
+            #     self.update_device_availability,
+            # )
             self._mqtt_client.subscribe_state_change(
                 self._device["product_id"],
                 self._device["device_id"],
@@ -43,6 +41,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
             )
 
         self.receive_queue = asyncio.Queue()
+        self.device_available_queue = asyncio.Queue()
 
     def mute_subscription_for_a_while(self) -> None:
         """Mute subscription for a while to avoid state bouncing."""
@@ -55,17 +54,8 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
 
         self.subscription_muted = async_call_later(self.hass, 20, unmute)
 
-    def update_device_availability(self, available: bool) -> None:
-        """Will be called when received new availability status."""
-        # if self.hass.states.get(f"refresh.{self.entity_id_base}_dehumidifier") is False:
-        #     return
-        _LOGGER.error(available)
-        # self.async_set_updated_data(available)
-
     def update_device_state(self, state: DeyeDeviceState) -> None:
         """Will be called when received new DeyeDeviceState."""
-        # if self.hass.states.get(f"refresh.{self.entity_id_base}_dehumidifier") is False:
-        #     return
         self.receive_queue.put_nowait(state)
         # self.async_set_updated_data(state)
 
@@ -81,6 +71,16 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
         # _LOGGER.error("poll_device_state called: " + str(self._device["product_id"]))
         if self.subscription_muted:
             return self.data
+
+        device_list = list(
+            filter(
+                lambda d: d["product_type"] == "dehumidifier" and d["device_id"] == self._device["device_id"],
+                await self._cloud_api.get_device_list(),
+            )
+        )
+        if len(device_list) > 0:
+            device = device_list[0]
+            self.device_available = device["online"]
 
         if self._device["platform"] == 1:
             self._mqtt_client.publish_command(

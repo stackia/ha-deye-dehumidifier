@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import logging
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -23,8 +21,8 @@ from libdeye.utils import get_product_feature_config
 from libdeye.cloud_api import DeyeCloudApi
 
 from libdeye.device_state_command import DeyeDeviceState
-from . import DeyeEntity, DeyeDataUpdateCoordinator
-from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN, DATA_COORDINATOR
+from . import DeyeEntity
+from .const import DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DATA_CLOUD_API, DOMAIN
 
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
@@ -49,8 +47,6 @@ async def async_setup_entry(
             await deye_dehumidifier.publish_command(prop, value)
 
         hass.bus.async_listen('call_humidifier_method', call_method)
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
@@ -82,7 +78,6 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        self.hass.states.async_set(f"refresh.{self.entity_id_base}_dehumidifier", True)
         self.hass.helpers.event.async_track_time_interval(
             self.put_device_state, timedelta(seconds=5)
         )
@@ -95,7 +90,6 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
             for prop, value in self.data_change_list.items():
                 set_class_variable(command, prop, value)
             self.data_change_list.clear()
-            _LOGGER.error("new" + json.dumps(command.json()))
             if self._device["platform"] == 1:
                 """Publish a MQTT command to this device."""
                 self._mqtt_client.publish_command(
@@ -108,9 +102,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
             self.async_write_ha_state()
 
     async def publish_command(self, prop, value) -> None:
-        self.hass.states.async_set(f"refresh.{self.entity_id_base}_dehumidifier", False)
         self.data_change_list[prop] = value
-        # self.mute_subscription_for_a_while()
 
     @property
     def get_device_state(self) -> DeyeDeviceState:
