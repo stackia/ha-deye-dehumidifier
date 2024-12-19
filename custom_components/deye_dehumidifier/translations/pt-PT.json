@@ -50,6 +50,9 @@
       }
     },
     "switch": {
+      "continuous": {
+        "name": "Desumidificação contínua"
+      },
       "child_lock": {
         "name": "Bloqueio anti crianças"
       },

@@ -34,7 +34,7 @@
           "mode": {
             "state": {
               "manual": "手动",
-              "air_purifier": "清新",
+              "air_purifier": "净化",
               "clothes_dryer": "干衣"
             }
           }
@@ -50,6 +50,9 @@
       }
     },
     "switch": {
+      "continuous": {
+        "name": "连续除湿"
+      },
       "child_lock": {
         "name": "童锁"
       },

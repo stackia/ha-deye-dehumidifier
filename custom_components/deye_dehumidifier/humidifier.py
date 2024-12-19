@@ -42,13 +42,6 @@ async def async_setup_entry(
         )
         async_add_entities([deye_dehumidifier])
 
-        async def call_method(event):
-            prop = event.data.get("prop")
-            value = event.data.get("value")
-            await deye_dehumidifier.publish_command(prop, value)
-
-        hass.bus.async_listen("call_humidifier_method", call_method)
-
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     """Dehumidifier entity."""
@@ -80,15 +73,21 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         self._attr_entity_picture = device["product_icon"]
         self.data_change_list: dict = dict()
 
+    async def call_method(self, event):
+        if event.data.get("device_id") == self._device["device_id"]:
+            prop = event.data.get("prop")
+            value = event.data.get("value")
+            await self.publish_command(prop, value)
+
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         self.hass.helpers.event.async_track_time_interval(
             self.put_device_state, timedelta(seconds=5)
         )
+        self.hass.bus.async_listen("call_humidifier_method", self.call_method)
 
     @callback
     async def put_device_state(self, now: datetime | None = None) -> None:
-        # _LOGGER.error(self.data_change_list)
         if len(self.data_change_list.items()) > 0:
             command = self.device_state.to_command()
             for prop, value in self.data_change_list.items():
