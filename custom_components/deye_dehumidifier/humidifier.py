@@ -14,14 +14,21 @@ from homeassistant.components.humidifier.const import MODE_AUTO, MODE_SLEEP
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 from libdeye.cloud_api import DeyeCloudApi
 from libdeye.device_state_command import DeyeDeviceState
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
 from libdeye.utils import get_product_feature_config
 
-from . import DeyeEntity
-from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
+from . import DeyeDataUpdateCoordinator, DeyeEntity
+from .const import (
+    DATA_CLOUD_API,
+    DATA_COORDINATOR,
+    DATA_DEVICE_LIST,
+    DATA_MQTT_CLIENT,
+    DOMAIN,
+)
 
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
@@ -38,7 +45,10 @@ async def async_setup_entry(
 
     for device in data[DATA_DEVICE_LIST]:
         deye_dehumidifier = DeyeDehumidifier(
-            device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+            data[DATA_COORDINATOR][device["device_id"]],
+            device,
+            data[DATA_MQTT_CLIENT],
+            data[DATA_CLOUD_API],
         )
         async_add_entities([deye_dehumidifier])
 
@@ -52,12 +62,13 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 
     def __init__(
         self,
+        coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
         mqtt_client: DeyeMqttClient,
         cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the humidifier entity."""
-        super().__init__(device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self.subscription_muted: CALLBACK_TYPE | None = None
         self._attr_unique_id += "-dehumidifier"
@@ -81,8 +92,8 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        self.hass.helpers.event.async_track_time_interval(
-            self.put_device_state, timedelta(seconds=5)
+        async_track_time_interval(
+            self.hass, self.put_device_state, timedelta(seconds=2)
         )
         self.hass.bus.async_listen("call_humidifier_method", self.call_method)
 
