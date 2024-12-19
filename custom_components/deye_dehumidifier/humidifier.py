@@ -14,6 +14,7 @@ from homeassistant.components.humidifier.const import MODE_AUTO, MODE_SLEEP
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 from libdeye.cloud_api import DeyeCloudApi
 from libdeye.device_state_command import DeyeDeviceState
 from libdeye.mqtt_client import DeyeMqttClient
@@ -91,8 +92,8 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        self.hass.helpers.event.async_track_time_interval(
-            self.put_device_state, timedelta(seconds=2)
+        async_track_time_interval(
+            self.hass, self.put_device_state, timedelta(seconds=2)
         )
         self.hass.bus.async_listen("call_humidifier_method", self.call_method)
 
