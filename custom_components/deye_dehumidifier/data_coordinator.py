@@ -93,8 +93,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
             )
             response = await asyncio.wait_for(
                 self.receive_queue.get(), timeout=10
-            )  # 设置超时时间
-            # _LOGGER.error(response.to_command().json())
+            )
             return response
         elif self._device["platform"] == 2:
             response = DeyeDeviceState(

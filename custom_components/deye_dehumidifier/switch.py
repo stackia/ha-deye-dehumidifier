@@ -14,6 +14,7 @@ from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
 from libdeye.utils import get_product_feature_config
 
+from libdeye.types import DeyeDeviceMode
 from . import DeyeEntity
 from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
 
@@ -29,6 +30,9 @@ async def async_setup_entry(
     for device in data[DATA_DEVICE_LIST]:
         async_add_entities(
             [DeyeChildLockSwitch(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])]
+        )
+        async_add_entities(
+            [DeyeContinuousSwitch(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])]
         )
         feature_config = get_product_feature_config(device["product_id"])
         if feature_config["anion"]:
@@ -148,3 +152,42 @@ class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
         """Turn the water pump off."""
         self.device_state.water_pump_switch = False
         await self.publish_command_async("water_pump_switch", False)
+
+
+class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
+    """Continuous switch entity."""
+
+    _attr_translation_key = "continuous"
+    _attr_device_class = SwitchDeviceClass.SWITCH
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        device: DeyeApiResponseDeviceInfo,
+        mqtt_client: DeyeMqttClient,
+        cloud_api: DeyeCloudApi,
+    ) -> None:
+        """Initialize the switch."""
+        super().__init__(device, mqtt_client, cloud_api)
+        assert self._attr_unique_id is not None
+        self._attr_unique_id += "-continuous"
+        self.entity_id = f"switch.{self.entity_id_base}_continuous"
+
+    @property
+    def available(self):
+        return super().available and self.device_state.mode == DeyeDeviceMode.MANUAL_MODE
+
+    @property
+    def is_on(self) -> bool:
+        """Return True if the continuous switch is on."""
+        return self.device_state.target_humidity == 25
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the continuous switch on."""
+        self.device_state.target_humidity = 25
+        await self.publish_command_async("target_humidity", 25)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the continuous switch off."""
+        self.device_state.target_humidity = 50
+        await self.publish_command_async("target_humidity", 50)

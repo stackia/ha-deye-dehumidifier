@@ -50,6 +50,9 @@
       }
     },
     "switch": {
+      "continuous": {
+        "name": "Continuous Dehumidify"
+      },
       "child_lock": {
         "name": "Child Lock"
       },

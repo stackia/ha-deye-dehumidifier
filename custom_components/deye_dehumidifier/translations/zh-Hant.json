@@ -50,6 +50,9 @@
       }
     },
     "switch": {
+      "continuous": {
+        "name": "連續除濕"
+      },
       "child_lock": {
         "name": "童鎖"
       },
