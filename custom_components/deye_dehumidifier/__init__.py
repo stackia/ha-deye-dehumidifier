@@ -43,6 +43,7 @@ PLATFORMS: list[Platform] = [
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Deye Dehumidifier from a config entry."""
 
@@ -156,7 +157,8 @@ class DeyeEntity(CoordinatorEntity, Entity):
         """Push command to a queue and deal with them together."""
         self.async_write_ha_state()
         self.hass.bus.fire(
-            "call_humidifier_method", {"device_id": self._device["device_id"], "prop": attribute, "value": value}
+            "call_humidifier_method",
+            {"device_id": self._device["device_id"], "prop": attribute, "value": value},
         )
         await self.coordinator.async_request_refresh()
 

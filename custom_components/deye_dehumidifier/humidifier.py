@@ -20,8 +20,14 @@ from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
 from libdeye.utils import get_product_feature_config
 
-from . import DeyeEntity, DeyeDataUpdateCoordinator
-from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN, DATA_COORDINATOR
+from . import DeyeDataUpdateCoordinator, DeyeEntity
+from .const import (
+    DATA_CLOUD_API,
+    DATA_COORDINATOR,
+    DATA_DEVICE_LIST,
+    DATA_MQTT_CLIENT,
+    DOMAIN,
+)
 
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
@@ -38,7 +44,10 @@ async def async_setup_entry(
 
     for device in data[DATA_DEVICE_LIST]:
         deye_dehumidifier = DeyeDehumidifier(
-            data[DATA_COORDINATOR][device["device_id"]], device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+            data[DATA_COORDINATOR][device["device_id"]],
+            device,
+            data[DATA_MQTT_CLIENT],
+            data[DATA_CLOUD_API],
         )
         async_add_entities([deye_dehumidifier])
 

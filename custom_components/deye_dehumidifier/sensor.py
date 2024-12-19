@@ -15,8 +15,14 @@ from libdeye.cloud_api import DeyeCloudApi
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
 
-from . import DeyeEntity, DeyeDataUpdateCoordinator
-from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN, DATA_COORDINATOR
+from . import DeyeDataUpdateCoordinator, DeyeEntity
+from .const import (
+    DATA_CLOUD_API,
+    DATA_COORDINATOR,
+    DATA_DEVICE_LIST,
+    DATA_MQTT_CLIENT,
+    DOMAIN,
+)
 
 
 async def async_setup_entry(
@@ -31,10 +37,16 @@ async def async_setup_entry(
         async_add_entities(
             [
                 DeyeHumiditySensor(
-                    data[DATA_COORDINATOR][device["device_id"]], device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+                    data[DATA_COORDINATOR][device["device_id"]],
+                    device,
+                    data[DATA_MQTT_CLIENT],
+                    data[DATA_CLOUD_API],
                 ),
                 DeyeTemperatureSensor(
-                    data[DATA_COORDINATOR][device["device_id"]], device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+                    data[DATA_COORDINATOR][device["device_id"]],
+                    device,
+                    data[DATA_MQTT_CLIENT],
+                    data[DATA_CLOUD_API],
                 ),
             ]
         )
