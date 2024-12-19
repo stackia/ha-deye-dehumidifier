@@ -17,8 +17,14 @@ from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeFanSpeed
 from libdeye.utils import get_product_feature_config
 
-from . import DeyeEntity
-from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
+from . import DeyeDataUpdateCoordinator, DeyeEntity
+from .const import (
+    DATA_CLOUD_API,
+    DATA_COORDINATOR,
+    DATA_DEVICE_LIST,
+    DATA_MQTT_CLIENT,
+    DOMAIN,
+)
 
 
 async def async_setup_entry(
@@ -33,7 +39,14 @@ async def async_setup_entry(
         feature_config = get_product_feature_config(device["product_id"])
         if len(feature_config["fan_speed"]) > 0:
             async_add_entities(
-                [DeyeFan(device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API])]
+                [
+                    DeyeFan(
+                        data[DATA_COORDINATOR][device["device_id"]],
+                        device,
+                        data[DATA_MQTT_CLIENT],
+                        data[DATA_CLOUD_API],
+                    )
+                ]
             )
 
 
@@ -44,12 +57,13 @@ class DeyeFan(DeyeEntity, FanEntity):
 
     def __init__(
         self,
+        coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
         mqtt_client: DeyeMqttClient,
         cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the fan entity."""
-        super().__init__(device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-fan"
         self.entity_id = f"fan.{self.entity_id_base}_fan"
