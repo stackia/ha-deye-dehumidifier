@@ -18,7 +18,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name="deye_data_update_coordinator",
             update_method=self.poll_device_state,
-            update_interval=timedelta(seconds=10),
+            update_interval=timedelta(seconds=5),
         )
         self._mqtt_client = mqtt_client
         self._cloud_api = cloud_api

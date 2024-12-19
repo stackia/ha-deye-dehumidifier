@@ -20,8 +20,8 @@ from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
 from libdeye.utils import get_product_feature_config
 
-from . import DeyeEntity
-from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
+from . import DeyeEntity, DeyeDataUpdateCoordinator
+from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN, DATA_COORDINATOR
 
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
@@ -38,7 +38,7 @@ async def async_setup_entry(
 
     for device in data[DATA_DEVICE_LIST]:
         deye_dehumidifier = DeyeDehumidifier(
-            device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+            data[DATA_COORDINATOR][device["device_id"]], device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
         )
         async_add_entities([deye_dehumidifier])
 
@@ -52,12 +52,13 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 
     def __init__(
         self,
+        coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
         mqtt_client: DeyeMqttClient,
         cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the humidifier entity."""
-        super().__init__(device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self.subscription_muted: CALLBACK_TYPE | None = None
         self._attr_unique_id += "-dehumidifier"

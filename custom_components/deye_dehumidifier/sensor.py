@@ -15,8 +15,8 @@ from libdeye.cloud_api import DeyeCloudApi
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
 
-from . import DeyeEntity
-from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN
+from . import DeyeEntity, DeyeDataUpdateCoordinator
+from .const import DATA_CLOUD_API, DATA_DEVICE_LIST, DATA_MQTT_CLIENT, DOMAIN, DATA_COORDINATOR
 
 
 async def async_setup_entry(
@@ -31,10 +31,10 @@ async def async_setup_entry(
         async_add_entities(
             [
                 DeyeHumiditySensor(
-                    device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+                    data[DATA_COORDINATOR][device["device_id"]], device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
                 ),
                 DeyeTemperatureSensor(
-                    device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
+                    data[DATA_COORDINATOR][device["device_id"]], device, data[DATA_MQTT_CLIENT], data[DATA_CLOUD_API]
                 ),
             ]
         )
@@ -50,12 +50,13 @@ class DeyeHumiditySensor(DeyeEntity, SensorEntity):
 
     def __init__(
         self,
+        coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
         mqtt_client: DeyeMqttClient,
         cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-humidity"
         self.entity_id = f"sensor.{self.entity_id_base}_humidity"
@@ -76,12 +77,13 @@ class DeyeTemperatureSensor(DeyeEntity, SensorEntity):
 
     def __init__(
         self,
+        coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
         mqtt_client: DeyeMqttClient,
         cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device, mqtt_client, cloud_api)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-temperature"
         self.entity_id = f"sensor.{self.entity_id_base}_temperature"
