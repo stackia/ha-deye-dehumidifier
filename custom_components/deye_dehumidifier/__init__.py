@@ -160,7 +160,7 @@ class DeyeEntity(CoordinatorEntity, Entity):
             "call_humidifier_method",
             {"device_id": self._device["device_id"], "prop": attribute, "value": value},
         )
-        await self.coordinator.async_request_refresh()
+        self.coordinator.mute_subscription_for_a_while()
 
     @property
     def available(self):

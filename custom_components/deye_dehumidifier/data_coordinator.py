@@ -61,9 +61,9 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator):
         self.receive_queue.put_nowait(state)
         # self.async_set_updated_data(state)
 
-    async def async_request_refresh(self) -> None:
-        self.mute_subscription_for_a_while()
-        await super().async_request_refresh()
+    # async def async_request_refresh(self) -> None:
+    #     self.mute_subscription_for_a_while()
+    #     await super().async_request_refresh()
 
     async def poll_device_state(self) -> DeyeDeviceState:
         """

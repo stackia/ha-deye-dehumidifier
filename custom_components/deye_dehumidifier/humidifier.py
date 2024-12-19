@@ -92,7 +92,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         self.hass.helpers.event.async_track_time_interval(
-            self.put_device_state, timedelta(seconds=5)
+            self.put_device_state, timedelta(seconds=2)
         )
         self.hass.bus.async_listen("call_humidifier_method", self.call_method)
 
