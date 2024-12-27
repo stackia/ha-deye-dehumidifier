@@ -106,7 +106,7 @@ class DeyeFan(DeyeEntity, FanEntity):
         """Set the speed of the fan, as a percentage."""
         if percentage == 0:
             await self.async_turn_off()
-        fan_speed = int(
+        fan_speed = DeyeFanSpeed(
             percentage_to_ordered_list_item(self._named_fan_speeds, percentage)
         )
         self.device_state.fan_speed = fan_speed
@@ -122,7 +122,7 @@ class DeyeFan(DeyeEntity, FanEntity):
         self.device_state.power_switch = True
         await self.publish_command_async("power_switch", True)
         if percentage is not None:
-            fan_speed = int(
+            fan_speed = DeyeFanSpeed(
                 percentage_to_ordered_list_item(self._named_fan_speeds, percentage)
             )
             self.device_state.fan_speed = fan_speed

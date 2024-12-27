@@ -10,9 +10,13 @@ from homeassistant.components.humidifier import (
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.components.humidifier.const import MODE_AUTO, MODE_SLEEP
+from homeassistant.components.humidifier.const import (
+    MODE_AUTO,
+    MODE_SLEEP,
+    HumidifierAction,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 from libdeye.cloud_api import DeyeCloudApi
@@ -82,9 +86,9 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         self._attr_min_humidity = feature_config["min_target_humidity"]
         self._attr_max_humidity = feature_config["max_target_humidity"]
         self._attr_entity_picture = device["product_icon"]
-        self.data_change_list: dict = dict()
+        self.data_change_list: dict[str, Any] = dict()
 
-    async def call_method(self, event):
+    async def call_method(self, event: Event) -> None:
         if event.data.get("device_id") == self._device["device_id"]:
             prop = event.data.get("prop")
             value = event.data.get("value")
@@ -119,7 +123,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 
             self.async_write_ha_state()
 
-    async def publish_command(self, prop, value) -> None:
+    async def publish_command(self, prop: str, value: Any) -> None:
         self.data_change_list[prop] = value
 
     @property
@@ -147,21 +151,13 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         return deye_mode_to_hass_mode(self.device_state.mode)
 
     @property
-    def action(self) -> str:
-        """
-        Return the current action.
-
-        off/drying/idle are from `homeassistant.components.humidifier.const.HumidifierAction`
-
-        For backward compatibility, we cannot directly import them from homeassistant (which requires
-        homeassistant >= 2023.7)
-        """
+    def action(self) -> HumidifierAction:
         if not self.device_state.power_switch:
-            return "off"
+            return HumidifierAction.OFF
         elif self.device_state.fan_running:
-            return "drying"
+            return HumidifierAction.DRYING
         else:
-            return "idle"
+            return HumidifierAction.IDLE
 
     async def async_set_mode(self, mode: str) -> None:
         """Set new working mode."""
@@ -184,7 +180,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         await self.publish_command_async("power_switch", False)
 
 
-def set_class_variable(obj, var_name, new_value):
+def set_class_variable(obj, var_name, new_value) -> None:
     if hasattr(obj, var_name):
         setattr(obj, var_name, new_value)
     else:

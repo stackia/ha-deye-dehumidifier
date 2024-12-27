@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -11,6 +12,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import ssl
 from libdeye.cloud_api import (
     DeyeCloudApi,
     DeyeCloudApiCannotConnectError,
@@ -67,6 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             mqtt_info["loginname"],
             mqtt_info["password"],
             mqtt_info["endpoint"],
+            ssl.get_default_context(),
         )
         mqtt_client.connect()
         device_list = list(
@@ -110,7 +113,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-class DeyeEntity(CoordinatorEntity, Entity):
+class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
     """Initiate Deye Base Class."""
 
     def __init__(
@@ -153,7 +156,7 @@ class DeyeEntity(CoordinatorEntity, Entity):
         self.async_on_remove(remove_handle)
         await super().async_added_to_hass()
 
-    async def publish_command_async(self, attribute, value):
+    async def publish_command_async(self, attribute: str, value: Any) -> None:
         """Push command to a queue and deal with them together."""
         self.async_write_ha_state()
         self.hass.bus.fire(
@@ -163,7 +166,7 @@ class DeyeEntity(CoordinatorEntity, Entity):
         self.coordinator.mute_subscription_for_a_while()
 
     @property
-    def available(self):
+    def available(self) -> bool:
         return self._device_available
 
     @callback

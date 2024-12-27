@@ -207,7 +207,7 @@ class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
         self.entity_id = f"switch.{self.entity_id_base}_continuous"
 
     @property
-    def available(self):
+    def available(self) -> bool:
         return (
             super().available and self.device_state.mode == DeyeDeviceMode.MANUAL_MODE
         )
