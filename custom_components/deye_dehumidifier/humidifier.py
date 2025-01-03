@@ -5,15 +5,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from homeassistant.components.humidifier import (
-    HumidifierDeviceClass,
-    HumidifierEntity,
-    HumidifierEntityFeature,
-)
+from homeassistant.components.humidifier import HumidifierDeviceClass, HumidifierEntity
 from homeassistant.components.humidifier.const import (
     MODE_AUTO,
     MODE_SLEEP,
     HumidifierAction,
+    HumidifierEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
@@ -25,7 +22,7 @@ from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
 from libdeye.utils import get_product_feature_config
 
-from . import DeyeDataUpdateCoordinator, DeyeEntity
+from . import DeyeEntity
 from .const import (
     DATA_CLOUD_API,
     DATA_COORDINATOR,
@@ -33,6 +30,7 @@ from .const import (
     DATA_MQTT_CLIENT,
     DOMAIN,
 )
+from .data_coordinator import DeyeDataUpdateCoordinator
 
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
@@ -90,7 +88,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 
     async def call_method(self, event: Event) -> None:
         if event.data.get("device_id") == self._device["device_id"]:
-            prop = event.data.get("prop")
+            prop = str(event.data.get("prop"))
             value = event.data.get("value")
             await self.publish_command(prop, value)
 
@@ -180,7 +178,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         await self.publish_command_async("power_switch", False)
 
 
-def set_class_variable(obj, var_name, new_value) -> None:
+def set_class_variable(obj: object, var_name: str, new_value: Any) -> None:
     if hasattr(obj, var_name):
         setattr(obj, var_name, new_value)
     else:

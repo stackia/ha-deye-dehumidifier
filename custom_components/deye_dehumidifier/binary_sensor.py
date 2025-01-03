@@ -14,7 +14,7 @@ from libdeye.cloud_api import DeyeCloudApi
 from libdeye.mqtt_client import DeyeMqttClient
 from libdeye.types import DeyeApiResponseDeviceInfo
 
-from . import DeyeDataUpdateCoordinator, DeyeEntity
+from . import DeyeEntity
 from .const import (
     DATA_CLOUD_API,
     DATA_COORDINATOR,
@@ -22,6 +22,7 @@ from .const import (
     DATA_MQTT_CLIENT,
     DOMAIN,
 )
+from .data_coordinator import DeyeDataUpdateCoordinator
 
 
 async def async_setup_entry(

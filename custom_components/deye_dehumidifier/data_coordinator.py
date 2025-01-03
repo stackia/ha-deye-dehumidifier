@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime, timedelta
-from typing import cast
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.event import async_call_later
@@ -69,7 +68,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceState]):
         quickly as possible.
         """
         if self.subscription_muted:
-            return cast(DeyeDeviceState, self.data)
+            return self.data
 
         device_list = list(
             filter(
@@ -88,7 +87,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceState]):
                 self._device["device_id"],
                 QUERY_DEVICE_STATE_COMMAND,
             )
-            return cast(DeyeDeviceState, self.data)
+            return self.data
         elif self._device["platform"] == 2:
             return DeyeDeviceState(
                 await self._cloud_api.get_fog_platform_device_properties(
@@ -96,4 +95,4 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceState]):
                 )
             )
         else:
-            return cast(DeyeDeviceState, self.data)
+            return self.data
