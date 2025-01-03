@@ -92,11 +92,12 @@ class DeyeFan(DeyeEntity, FanEntity):
     @property
     def percentage(self) -> int:
         """Return the current speed as a percentage."""
-        if self.device_state.fan_speed == DeyeFanSpeed.STOPPED:
+        try:
+            return ordered_list_item_to_percentage(
+                self._named_fan_speeds, self.device_state.fan_speed
+            )
+        except ValueError:
             return 0
-        return ordered_list_item_to_percentage(
-            self._named_fan_speeds, self.device_state.fan_speed
-        )
 
     async def async_oscillate(self, oscillating: bool) -> None:
         """Oscillate the fan."""
