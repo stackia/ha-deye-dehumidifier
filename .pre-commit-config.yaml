@@ -2,6 +2,9 @@
 # See https://pre-commit.com/hooks.html for more hooks
 default_language_version:
   python: python3.13
+ci:
+  skip:
+    - mypy
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
