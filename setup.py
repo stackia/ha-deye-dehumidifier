@@ -1,5 +1,5 @@
 """
-    Use setup.cfg to configure your project.
+Use setup.cfg to configure your project.
 """
 
 from setuptools import setup
