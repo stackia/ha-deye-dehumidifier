@@ -71,7 +71,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         )
 
-        classic_device_list = [device for device in device_list if device["platform"] == 1]
+        classic_device_list = [
+            device for device in device_list if device["platform"] == 1
+        ]
         mqtt_client = None
         if len(classic_device_list) > 0:
             mqtt_info = await cloud_api.get_deye_platform_mqtt_info()
