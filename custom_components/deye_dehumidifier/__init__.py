@@ -63,22 +63,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data[CONF_AUTH_TOKEN],
         )
         cloud_api.on_auth_token_refreshed = on_auth_token_refreshed
-        mqtt_info = await cloud_api.get_deye_platform_mqtt_info()
-        mqtt_client = DeyeMqttClient(
-            mqtt_info["mqtthost"],
-            mqtt_info["sslport"],
-            mqtt_info["loginname"],
-            mqtt_info["password"],
-            mqtt_info["endpoint"],
-            ssl.get_default_context(),
-        )
-        mqtt_client.connect()
+
         device_list = list(
             filter(
                 lambda d: d["product_type"] == "dehumidifier",
                 await cloud_api.get_device_list(),
             )
         )
+
+        classic_device_list = [
+            device for device in device_list if device["platform"] == 1
+        ]
+        mqtt_client = None
+        if len(classic_device_list) > 0:
+            mqtt_info = await cloud_api.get_deye_platform_mqtt_info()
+            mqtt_client = DeyeMqttClient(
+                mqtt_info["mqtthost"],
+                mqtt_info["sslport"],
+                mqtt_info["loginname"],
+                mqtt_info["password"],
+                mqtt_info["endpoint"],
+                ssl.get_default_context(),
+            )
+            mqtt_client.connect()
+
         coordinator_map = {}
         for device in device_list:
             coordinator = DeyeDataUpdateCoordinator(
@@ -109,7 +117,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         data = hass.data[DOMAIN].pop(entry.entry_id)
         mqtt_client: DeyeMqttClient = data[DATA_MQTT_CLIENT]
-        mqtt_client.disconnect()
+        if mqtt_client is not None:
+            mqtt_client.disconnect()
 
     return unload_ok
 
