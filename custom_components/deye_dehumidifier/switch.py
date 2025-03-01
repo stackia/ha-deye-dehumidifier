@@ -9,19 +9,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from libdeye.cloud_api import DeyeCloudApi
-from libdeye.mqtt_client import DeyeMqttClient
-from libdeye.types import DeyeApiResponseDeviceInfo, DeyeDeviceMode
-from libdeye.utils import get_product_feature_config
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo
+from libdeye.const import DeyeDeviceMode, get_product_feature_config
 
-from . import DeyeEntity
-from .const import (
-    DATA_CLOUD_API,
-    DATA_COORDINATOR,
-    DATA_DEVICE_LIST,
-    DATA_MQTT_CLIENT,
-    DOMAIN,
-)
+from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 
@@ -31,38 +22,33 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add swiches for passed config_entry in HA."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
+    data = hass.data[DATA_KEY][config_entry.entry_id]
 
-    for device in data[DATA_DEVICE_LIST]:
+    for device in data.device_list:
+        feature_config = get_product_feature_config(device["product_id"])
         async_add_entities(
             [
                 DeyeChildLockSwitch(
-                    data[DATA_COORDINATOR][device["device_id"]],
+                    data.coordinator_map[device["device_id"]],
                     device,
-                    data[DATA_MQTT_CLIENT],
-                    data[DATA_CLOUD_API],
                 )
             ]
         )
         async_add_entities(
             [
                 DeyeContinuousSwitch(
-                    data[DATA_COORDINATOR][device["device_id"]],
+                    data.coordinator_map[device["device_id"]],
                     device,
-                    data[DATA_MQTT_CLIENT],
-                    data[DATA_CLOUD_API],
+                    feature_config["min_target_humidity"],
                 )
             ]
         )
-        feature_config = get_product_feature_config(device["product_id"])
         if feature_config["anion"]:
             async_add_entities(
                 [
                     DeyeAnionSwitch(
-                        data[DATA_COORDINATOR][device["device_id"]],
+                        data.coordinator_map[device["device_id"]],
                         device,
-                        data[DATA_MQTT_CLIENT],
-                        data[DATA_CLOUD_API],
                     )
                 ]
             )
@@ -70,10 +56,8 @@ async def async_setup_entry(
             async_add_entities(
                 [
                     DeyeWaterPumpSwitch(
-                        data[DATA_COORDINATOR][device["device_id"]],
+                        data.coordinator_map[device["device_id"]],
                         device,
-                        data[DATA_MQTT_CLIENT],
-                        data[DATA_CLOUD_API],
                     )
                 ]
             )
@@ -90,11 +74,9 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
         self,
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
-        mqtt_client: DeyeMqttClient,
-        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the switch."""
-        super().__init__(coordinator, device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-child-lock"
         self.entity_id = f"switch.{self.entity_id_base}_child_lock"
@@ -102,17 +84,17 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the child lock is on."""
-        return self.device_state.child_lock_switch
+        return self.coordinator.data.state.child_lock_switch
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the child lock on."""
-        self.device_state.child_lock_switch = True
-        await self.publish_command_async("child_lock_switch", True)
+        self.coordinator.data.state.child_lock_switch = True
+        await self.publish_command_from_current_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the child lock off."""
-        self.device_state.child_lock_switch = False
-        await self.publish_command_async("child_lock_switch", False)
+        self.coordinator.data.state.child_lock_switch = False
+        await self.publish_command_from_current_state()
 
 
 class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
@@ -126,11 +108,9 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
         self,
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
-        mqtt_client: DeyeMqttClient,
-        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the switch."""
-        super().__init__(coordinator, device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-anion"
         self.entity_id = f"switch.{self.entity_id_base}_anion"
@@ -138,17 +118,17 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the anion switch is on."""
-        return self.device_state.anion_switch
+        return self.coordinator.data.state.anion_switch
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the anion switch on."""
-        self.device_state.anion_switch = True
-        await self.publish_command_async("anion_switch", True)
+        self.coordinator.data.state.anion_switch = True
+        await self.publish_command_from_current_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the anion switch off."""
-        self.device_state.anion_switch = False
-        await self.publish_command_async("anion_switch", False)
+        self.coordinator.data.state.anion_switch = False
+        await self.publish_command_from_current_state()
 
 
 class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
@@ -162,11 +142,9 @@ class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
         self,
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
-        mqtt_client: DeyeMqttClient,
-        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the switch."""
-        super().__init__(coordinator, device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-water-pump"
         self.entity_id = f"switch.{self.entity_id_base}_water_pump"
@@ -174,17 +152,17 @@ class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the water pump switch is on."""
-        return self.device_state.water_pump_switch
+        return self.coordinator.data.state.water_pump_switch
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water pump on."""
-        self.device_state.water_pump_switch = True
-        await self.publish_command_async("water_pump_switch", True)
+        self.coordinator.data.state.water_pump_switch = True
+        await self.publish_command_from_current_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the water pump off."""
-        self.device_state.water_pump_switch = False
-        await self.publish_command_async("water_pump_switch", False)
+        self.coordinator.data.state.water_pump_switch = False
+        await self.publish_command_from_current_state()
 
 
 class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
@@ -198,32 +176,35 @@ class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
         self,
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
-        mqtt_client: DeyeMqttClient,
-        cloud_api: DeyeCloudApi,
+        min_supported_humidity: int,
     ) -> None:
         """Initialize the switch."""
-        super().__init__(coordinator, device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-continuous"
         self.entity_id = f"switch.{self.entity_id_base}_continuous"
+        self._min_supported_humidity = min_supported_humidity
 
     @property
     def available(self) -> bool:
         return (
-            super().available and self.device_state.mode == DeyeDeviceMode.MANUAL_MODE
+            super().available
+            and self.coordinator.data.state.mode == DeyeDeviceMode.MANUAL_MODE
         )
 
     @property
     def is_on(self) -> bool:
         """Return True if the continuous switch is on."""
-        return self.device_state.target_humidity == 25
+        return (
+            self.coordinator.data.state.target_humidity <= self._min_supported_humidity
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the continuous switch on."""
-        self.device_state.target_humidity = 25
-        await self.publish_command_async("target_humidity", 25)
+        self.coordinator.data.state.target_humidity = self._min_supported_humidity
+        await self.publish_command_from_current_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the continuous switch off."""
-        self.device_state.target_humidity = 50
-        await self.publish_command_async("target_humidity", 50)
+        self.coordinator.data.state.target_humidity = 50
+        await self.publish_command_from_current_state()

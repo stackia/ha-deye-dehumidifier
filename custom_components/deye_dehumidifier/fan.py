@@ -12,19 +12,10 @@ from homeassistant.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
-from libdeye.cloud_api import DeyeCloudApi
-from libdeye.mqtt_client import DeyeMqttClient
-from libdeye.types import DeyeApiResponseDeviceInfo, DeyeFanSpeed
-from libdeye.utils import get_product_feature_config
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo
+from libdeye.const import DeyeFanSpeed, get_product_feature_config
 
-from . import DeyeEntity
-from .const import (
-    DATA_CLOUD_API,
-    DATA_COORDINATOR,
-    DATA_DEVICE_LIST,
-    DATA_MQTT_CLIENT,
-    DOMAIN,
-)
+from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 
@@ -34,18 +25,15 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add fans for passed config_entry in HA."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
-
-    for device in data[DATA_DEVICE_LIST]:
+    data = hass.data[DATA_KEY][config_entry.entry_id]
+    for device in data.device_list:
         feature_config = get_product_feature_config(device["product_id"])
         if len(feature_config["fan_speed"]) > 0:
             async_add_entities(
                 [
                     DeyeFan(
-                        data[DATA_COORDINATOR][device["device_id"]],
+                        data.coordinator_map[device["device_id"]],
                         device,
-                        data[DATA_MQTT_CLIENT],
-                        data[DATA_CLOUD_API],
                     )
                 ]
             )
@@ -60,20 +48,18 @@ class DeyeFan(DeyeEntity, FanEntity):
         self,
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
-        mqtt_client: DeyeMqttClient,
-        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the fan entity."""
-        super().__init__(coordinator, device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-fan"
         self.entity_id = f"fan.{self.entity_id_base}_fan"
         feature_config = get_product_feature_config(device["product_id"])
-        self._attr_supported_features = FanEntityFeature.SET_SPEED
-        if hasattr(FanEntityFeature, "TURN_ON"):  # v2024.8
-            self._attr_supported_features |= FanEntityFeature.TURN_ON
-        if hasattr(FanEntityFeature, "TURN_OFF"):
-            self._attr_supported_features |= FanEntityFeature.TURN_OFF
+        self._attr_supported_features = (
+            FanEntityFeature.SET_SPEED
+            | FanEntityFeature.TURN_ON
+            | FanEntityFeature.TURN_OFF
+        )
         if feature_config["oscillating"]:
             self._attr_supported_features |= FanEntityFeature.OSCILLATE
         self._named_fan_speeds = feature_config["fan_speed"]
@@ -82,27 +68,27 @@ class DeyeFan(DeyeEntity, FanEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the entity is on."""
-        return self.device_state.power_switch
+        return self.coordinator.data.state.power_switch
 
     @property
     def oscillating(self) -> bool:
         """Return whether or not the fan is currently oscillating."""
-        return self.device_state.oscillating_switch
+        return self.coordinator.data.state.oscillating_switch
 
     @property
     def percentage(self) -> int:
         """Return the current speed as a percentage."""
         try:
             return ordered_list_item_to_percentage(
-                self._named_fan_speeds, self.device_state.fan_speed
+                self._named_fan_speeds, self.coordinator.data.state.fan_speed
             )
         except ValueError:
             return 0
 
     async def async_oscillate(self, oscillating: bool) -> None:
         """Oscillate the fan."""
-        self.device_state.oscillating_switch = oscillating
-        await self.publish_command_async("oscillating_switch", oscillating)
+        self.coordinator.data.state.oscillating_switch = oscillating
+        await self.publish_command_from_current_state()
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
@@ -111,8 +97,8 @@ class DeyeFan(DeyeEntity, FanEntity):
         fan_speed = DeyeFanSpeed(
             percentage_to_ordered_list_item(self._named_fan_speeds, percentage)
         )
-        self.device_state.fan_speed = fan_speed
-        await self.publish_command_async("fan_speed", fan_speed)
+        self.coordinator.data.state.fan_speed = fan_speed
+        await self.publish_command_from_current_state()
 
     async def async_turn_on(
         self,
@@ -121,16 +107,15 @@ class DeyeFan(DeyeEntity, FanEntity):
         **kwargs: Any,
     ) -> None:
         """Turn on the fan."""
-        self.device_state.power_switch = True
-        await self.publish_command_async("power_switch", True)
+        self.coordinator.data.state.power_switch = True
         if percentage is not None:
             fan_speed = DeyeFanSpeed(
                 percentage_to_ordered_list_item(self._named_fan_speeds, percentage)
             )
-            self.device_state.fan_speed = fan_speed
-            await self.publish_command_async("fan_speed", fan_speed)
+            self.coordinator.data.state.fan_speed = fan_speed
+        await self.publish_command_from_current_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        self.device_state.power_switch = False
-        await self.publish_command_async("power_switch", False)
+        self.coordinator.data.state.power_switch = False
+        await self.publish_command_from_current_state()
