@@ -1,98 +1,110 @@
 import logging
 from datetime import datetime, timedelta
+from typing import NamedTuple
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from libdeye.cloud_api import DeyeCloudApi
-from libdeye.const import QUERY_DEVICE_STATE_COMMAND
-from libdeye.device_state_command import DeyeDeviceState
-from libdeye.mqtt_client import DeyeMqttClient
-from libdeye.types import DeyeApiResponseDeviceInfo
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo, DeyeCloudApi
+from libdeye.const import QUERY_DEVICE_STATE_COMMAND_CLASSIC
+from libdeye.device_state import DeyeDeviceState
+from libdeye.mqtt_client import BaseDeyeMqttClient, DeyeClassicMqttClient
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceState]):
+class DeyeDeviceData(NamedTuple):
+    state: DeyeDeviceState
+    available: bool
+
+
+class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
     def __init__(
         self,
         hass: HomeAssistant,
+        config_entry: ConfigEntry,
         device: DeyeApiResponseDeviceInfo,
-        mqtt_client: DeyeMqttClient,
+        mqtt_client: BaseDeyeMqttClient,
         cloud_api: DeyeCloudApi,
     ) -> None:
         super().__init__(
             hass,
             _LOGGER,
-            name="deye_data_update_coordinator",
+            config_entry=config_entry,
+            name=f"{device['device_name']} ({device['device_id']})",
             update_method=self.poll_device_state,
-            update_interval=timedelta(seconds=5),
+            update_interval=timedelta(seconds=30),
+            always_update=False,
         )
-        self._mqtt_client = mqtt_client
+        self.mqtt_client = mqtt_client
         self._cloud_api = cloud_api
-        self.subscription_muted: CALLBACK_TYPE | None = None
-
-        self.data = DeyeDeviceState(
-            "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
-        )
+        self.state_update_muted: CALLBACK_TYPE | None = None
         self._device = device
-        self.device_available = self._device["online"]
-        """When entity is added to Home Assistant."""
-        if self._device["platform"] == 1:
-            self._mqtt_client.subscribe_state_change(
-                self._device["product_id"],
-                self._device["device_id"],
-                self.update_device_state,
-            )
 
-    def mute_subscription_for_a_while(self) -> None:
+    async def _async_setup(self) -> None:
+        """Set up the coordinator"""
+        self.data = DeyeDeviceData(
+            state=DeyeDeviceState(
+                self._device["payload"]
+                or "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
+            ),
+            available=self._device["online"],
+        )
+        self.mqtt_client.subscribe_state_change(
+            self._device["product_id"],
+            self._device["device_id"],
+            self.update_device_state,
+        )
+        self.mqtt_client.subscribe_availability_change(
+            self._device["product_id"],
+            self._device["device_id"],
+            self.update_device_availability,
+        )
+
+    def mute_state_update_for_a_while(self) -> None:
         """Mute subscription for a while to avoid state bouncing."""
-        if self.subscription_muted:
-            self.subscription_muted()
+        if self.state_update_muted:
+            self.state_update_muted()
 
         @callback
         def unmute(now: datetime) -> None:
-            self.subscription_muted = None
+            self.state_update_muted = None
 
-        self.subscription_muted = async_call_later(self.hass, 20, unmute)
+        self.state_update_muted = async_call_later(self.hass, 10, unmute)
 
     def update_device_state(self, state: DeyeDeviceState) -> None:
         """Will be called when received new DeyeDeviceState."""
-        if self.subscription_muted:
+        if self.state_update_muted:
             return
-        self.async_set_updated_data(state)
+        self.async_set_updated_data(
+            DeyeDeviceData(state=state, available=self.data.available)
+        )
 
-    async def poll_device_state(self) -> DeyeDeviceState:
+    def update_device_availability(self, available: bool) -> None:
+        """Will be called when received device availability change."""
+        self.async_set_updated_data(
+            DeyeDeviceData(state=self.data.state, available=available)
+        )
+
+    async def poll_device_state(self) -> DeyeDeviceData:
         """
-        Some Deye devices have a very long heartbeat period. So polling is still necessary to get the latest state as
-        quickly as possible.
+        Some Deye devices have a very long heartbeat period. So polling is still necessary.
         """
-        if self.subscription_muted:
+        if self.state_update_muted:
             return self.data
 
-        device_list = list(
-            filter(
-                lambda d: d["product_type"] == "dehumidifier"
-                and d["device_id"] == self._device["device_id"],
-                await self._cloud_api.get_device_list(),
-            )
-        )
-        if len(device_list) > 0:
-            device = device_list[0]
-            self.device_available = device["online"]
-
-        if self._device["platform"] == 1:
-            self._mqtt_client.publish_command(
+        if isinstance(self.mqtt_client, DeyeClassicMqttClient):
+            await self.mqtt_client.publish_command(
                 self._device["product_id"],
                 self._device["device_id"],
-                QUERY_DEVICE_STATE_COMMAND,
+                QUERY_DEVICE_STATE_COMMAND_CLASSIC,
             )
             return self.data
-        elif self._device["platform"] == 2:
-            return DeyeDeviceState(
-                await self._cloud_api.get_fog_platform_device_properties(
-                    self._device["device_id"]
-                )
-            )
         else:
-            return self.data
+            return DeyeDeviceData(
+                state=await self.mqtt_client.query_device_state(
+                    self._device["product_id"], self._device["device_id"]
+                ),
+                available=self.data.available,
+            )

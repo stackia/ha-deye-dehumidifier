@@ -10,18 +10,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from libdeye.cloud_api import DeyeCloudApi
-from libdeye.mqtt_client import DeyeMqttClient
-from libdeye.types import DeyeApiResponseDeviceInfo
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo
 
-from . import DeyeEntity
-from .const import (
-    DATA_CLOUD_API,
-    DATA_COORDINATOR,
-    DATA_DEVICE_LIST,
-    DATA_MQTT_CLIENT,
-    DOMAIN,
-)
+from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 
@@ -31,22 +22,17 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add sensors for passed config_entry in HA."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
-
-    for device in data[DATA_DEVICE_LIST]:
+    data = hass.data[DATA_KEY][config_entry.entry_id]
+    for device in data.device_list:
         async_add_entities(
             [
                 DeyeWaterTankBinarySensor(
-                    data[DATA_COORDINATOR][device["device_id"]],
+                    data.coordinator_map[device["device_id"]],
                     device,
-                    data[DATA_MQTT_CLIENT],
-                    data[DATA_CLOUD_API],
                 ),
                 DeyeDefrostingBinarySensor(
-                    data[DATA_COORDINATOR][device["device_id"]],
+                    data.coordinator_map[device["device_id"]],
                     device,
-                    data[DATA_MQTT_CLIENT],
-                    data[DATA_CLOUD_API],
                 ),
             ]
         )
@@ -63,11 +49,9 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
         self,
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
-        mqtt_client: DeyeMqttClient,
-        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator, device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-water-tank"
         self.entity_id = f"binary_sensor.{self.entity_id_base}_water_tank"
@@ -75,7 +59,7 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the water tank is full."""
-        return self.device_state.water_tank_full
+        return self.coordinator.data.state.water_tank_full
 
 
 class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
@@ -89,11 +73,9 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
         self,
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
-        mqtt_client: DeyeMqttClient,
-        cloud_api: DeyeCloudApi,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator, device, mqtt_client, cloud_api)
+        super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-defrosting"
         self.entity_id = f"binary_sensor.{self.entity_id_base}_defrosting"
@@ -101,4 +83,4 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the device is defrosting."""
-        return self.device_state.defrosting
+        return self.coordinator.data.state.defrosting

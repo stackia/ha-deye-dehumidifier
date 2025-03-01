@@ -2,9 +2,6 @@
 # See https://pre-commit.com/hooks.html for more hooks
 default_language_version:
   python: python3.13
-ci:
-  skip:
-    - mypy
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -29,11 +26,3 @@ repos:
     rev: 25.1.0
     hooks:
       - id: black
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
-    hooks:
-      - id: mypy
-        exclude: ^docs/
-        additional_dependencies:
-          - homeassistant==2024.12.5
-          - libdeye==1.3.2

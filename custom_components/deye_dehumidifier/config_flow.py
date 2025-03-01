@@ -55,7 +55,7 @@ async def validate_input(
         errors["base"] = "cannot_connect"
     except DeyeCloudApiInvalidAuthError:
         errors["base"] = "invalid_auth"
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         _LOGGER.exception("Unexpected exception")
         errors["base"] = "unknown"
 
@@ -83,9 +83,15 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
                     title=result["title"],
                     data=result["data"],
                 )
+            else:
+                errors = result["errors"]
 
         return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_DATA_SCHEMA, user_input
+            ),
+            errors=errors,
         )
 
     async def async_step_reauth(
@@ -114,7 +120,9 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
         if "errors" in result:
             return self.async_show_form(
                 step_id="reauth_confirm",
-                data_schema=STEP_REAUTH_DATA_SCHEMA,
+                data_schema=self.add_suggested_values_to_schema(
+                    STEP_REAUTH_DATA_SCHEMA, user_input
+                ),
                 errors=result["errors"],
                 description_placeholders={"username": username},
             )
