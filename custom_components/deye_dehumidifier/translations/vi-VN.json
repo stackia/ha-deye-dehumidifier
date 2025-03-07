@@ -1,0 +1,84 @@
+{
+  "title": "Máy hút ẩm Deye (德业)",
+  "config": {
+    "abort": {
+      "already_configured_account": "Tài khoản đã được cấu hình",
+      "reauth_successful": "Xác thực lại thành công"
+    },
+    "error": {
+      "cannot_connect": "Không thể kết nối",
+      "invalid_auth": "Xác thực không hợp lệ",
+      "unknown": "Lỗi không xác định"
+    },
+    "step": {
+      "reauth_confirm": {
+        "title": "Xác thực lại tích hợp",
+        "description": "Vui lòng nhập lại mật khẩu cho tài khoản {username}",
+        "data": {
+          "password": "Mật khẩu"
+        }
+      },
+      "user": {
+        "description": "Vui lòng nhập thông tin đăng nhập cho ứng dụng _Deye Smart (德业智能)_",
+        "data": {
+          "username": "Số điện thoại",
+          "password": "Mật khẩu"
+        }
+      }
+    }
+  },
+  "entity": {
+    "humidifier": {
+      "dehumidifier": {
+        "state_attributes": {
+          "mode": {
+            "state": {
+              "manual": "Thủ công",
+              "air_purifier": "Làm sạch không khí",
+              "clothes_dryer": "Sấy quần áo"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Nhiệt độ môi trường"
+      },
+      "humidity": {
+        "name": "Độ ẩm môi trường"
+      }
+    },
+    "switch": {
+      "continuous": {
+        "name": "Hút ẩm liên tục"
+      },
+      "child_lock": {
+        "name": "Khóa trẻ em"
+      },
+      "anion": {
+        "name": "Ion âm"
+      },
+      "water_pump": {
+        "name": "Bơm nước"
+      }
+    },
+    "binary_sensor": {
+      "water_tank": {
+        "name": "Bình nước",
+        "state": {
+          "on": "Đầy",
+          "off": "Chưa đầy"
+        }
+      },
+      "defrosting": {
+        "name": "Rã đông"
+      }
+    },
+    "fan": {
+      "fan": {
+        "name": "Quạt"
+      }
+    }
+  }
+}
