@@ -78,10 +78,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         device_list = list(
             filter(
                 # The product_type was initially set to "dehumidifier"
-                # but at some point (around 04/15/2025) it was changed to "除湿机" or "更多"
+                # but at some point (around 06/18/2025) it was changed to "除湿机" or "其他"
                 lambda d: d["product_type"] == "dehumidifier"
                 or d["product_type"] == "除湿机"
-                or d["product_type"] == "更多",
+                or d["product_type"] == "其他",
                 await cloud_api.get_device_list(),
             )
         )
