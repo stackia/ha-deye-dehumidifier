@@ -7,5 +7,5 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/stackia/ha-deye-dehumidifier/issues",
   "requirements": ["libdeye==2.1.2"],
-  "version": "2.1.2"
+  "version": "2.1.3"
 }
