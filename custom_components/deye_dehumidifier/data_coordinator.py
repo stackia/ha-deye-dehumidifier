@@ -15,6 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class DeyeDeviceData(NamedTuple):
+    reported_state: DeyeDeviceState
     state: DeyeDeviceState
     available: bool
 
@@ -44,11 +45,13 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
 
     async def _async_setup(self) -> None:
         """Set up the coordinator"""
+        reported_state = DeyeDeviceState(
+            self._device["payload"]
+            or "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
+        )
         self.data = DeyeDeviceData(
-            state=DeyeDeviceState(
-                self._device["payload"]
-                or "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
-            ),
+            reported_state=reported_state,
+            state=reported_state.copy(),
             available=self._device["online"],
         )
         self.mqtt_client.subscribe_state_change(
@@ -78,13 +81,29 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         if self.state_update_muted:
             return
         self.async_set_updated_data(
-            DeyeDeviceData(state=state, available=self.data.available)
+            DeyeDeviceData(
+                reported_state=state,
+                state=state.copy(),
+                available=self.data.available,
+            )
         )
 
     def update_device_availability(self, available: bool) -> None:
         """Will be called when received device availability change."""
         self.async_set_updated_data(
-            DeyeDeviceData(state=self.data.state, available=available)
+            DeyeDeviceData(
+                reported_state=self.data.reported_state,
+                state=self.data.state,
+                available=available,
+            )
+        )
+
+    def sync_reported_state_after_publish(self) -> None:
+        """Align reported state with the desired state after a successful publish."""
+        self.data = DeyeDeviceData(
+            reported_state=self.data.state.copy(),
+            state=self.data.state,
+            available=self.data.available,
         )
 
     async def poll_device_state(self) -> DeyeDeviceData:
@@ -101,10 +120,13 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
                 QUERY_DEVICE_STATE_COMMAND_CLASSIC,
             )
             return self.data
-        else:
-            return DeyeDeviceData(
-                state=await self.mqtt_client.query_device_state(
-                    self._device["product_id"], self._device["device_id"]
-                ),
-                available=self.data.available,
-            )
+
+        reported_state = await self.mqtt_client.query_device_state(
+            self._device["product_id"],
+            self._device["device_id"],
+        )
+        return DeyeDeviceData(
+            reported_state=reported_state,
+            state=reported_state.copy(),
+            available=self.data.available,
+        )
