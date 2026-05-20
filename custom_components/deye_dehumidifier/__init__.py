@@ -179,10 +179,24 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
 
     async def _publish_command(self) -> None:
         """Publish commands to the device."""
+        command = self.coordinator.data.state.to_command()
+        if isinstance(self.coordinator.mqtt_client, DeyeFogMqttClient):
+            properties = command.to_json_diff(self.coordinator.data.reported_state)
+            if not properties:
+                return
+            await self.coordinator.mqtt_client.publish_command(
+                self._device["product_id"],
+                self._device["device_id"],
+                command,
+                properties=properties,
+            )
+            self.coordinator.sync_reported_state_after_publish()
+            return
+
         await self.coordinator.mqtt_client.publish_command(
             self._device["product_id"],
             self._device["device_id"],
-            self.coordinator.data.state.to_command(),
+            command,
         )
 
     async def publish_command_from_current_state(self) -> None:
