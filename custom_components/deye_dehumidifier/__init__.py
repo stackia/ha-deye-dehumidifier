@@ -79,9 +79,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             filter(
                 # The product_type was initially set to "dehumidifier"
                 # but at some point (around 06/18/2025) it was changed to "除湿机" or "其他"
-                lambda d: d["product_type"] == "dehumidifier"
-                or d["product_type"] == "除湿机"
-                or d["product_type"] == "其他",
+                lambda d: (
+                    d["product_type"] == "dehumidifier"
+                    or d["product_type"] == "除湿机"
+                    or d["product_type"] == "其他"
+                ),
                 await cloud_api.get_device_list(),
             )
         )
@@ -155,7 +157,7 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
         self._device = device
         self._attr_has_entity_name = True
         self._attr_unique_id = self._device["mac"]
-        self.entity_id_base = f'deye_{self._device["mac"].lower()}'  # We will override HA generated entity ID
+        self.entity_id_base = f"deye_{self._device['mac'].lower()}"  # We will override HA generated entity ID
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._device["mac"])},
             model=self._device["product_name"],
@@ -184,6 +186,8 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
             properties = command.to_json_diff(self.coordinator.data.reported_state)
             if not properties:
                 return
+            if "Power" not in properties and command.power_switch:
+                properties["Power"] = 1
             await self.coordinator.mqtt_client.publish_command(
                 self._device["product_id"],
                 self._device["device_id"],
