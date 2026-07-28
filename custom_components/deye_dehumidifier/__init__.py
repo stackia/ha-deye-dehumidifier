@@ -186,8 +186,6 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
             properties = command.to_json_diff(self.coordinator.data.reported_state)
             if not properties:
                 return
-            if "Power" not in properties and command.power_switch:
-                properties["Power"] = 1
             await self.coordinator.mqtt_client.publish_command(
                 self._device["product_id"],
                 self._device["device_id"],
