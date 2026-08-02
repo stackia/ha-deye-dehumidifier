@@ -23,6 +23,7 @@ from libdeye.cloud_api import (
     DeyeCloudApiInvalidAuthError,
     DeyeIotPlatform,
 )
+from libdeye.const import DeyeDeviceMode
 from libdeye.mqtt_client import (
     BaseDeyeMqttClient,
     DeyeClassicMqttClient,
@@ -184,6 +185,23 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
         command = self.coordinator.data.state.to_command()
         if isinstance(self.coordinator.mqtt_client, DeyeFogMqttClient):
             properties = command.to_json_diff(self.coordinator.data.reported_state)
+            # When powered off, the device loses its mode and reverts to manual
+            # at the minimum humidity. Re-assert power + mode together on wake,
+            # and avoid sending a low SetHumidity in auto mode (which would
+            # otherwise force the device into continuous/manual operation).
+            powering_on = (
+                command.power_switch
+                and not self.coordinator.data.reported_state.power_switch
+            )
+            if powering_on:
+                properties["Power"] = 1
+                properties["Mode"] = int(command.mode)
+            elif properties and command.power_switch and "Power" not in properties:
+                # Some Deye models (e.g. U20A3, V58A3) turn the device off when
+                # a partial Fog update omits the Power property while on.
+                properties["Power"] = 1
+            if command.mode == DeyeDeviceMode.AUTO_MODE:
+                properties.pop("SetHumidity", None)
             if not properties:
                 return
             await self.coordinator.mqtt_client.publish_command(
