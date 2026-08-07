@@ -25,6 +25,9 @@ jobs:
       - name: Run type check
         run: source .venv/bin/activate && mypy .
 
+      - name: Run tests
+        run: source .venv/bin/activate && python -m unittest discover -s tests
+
   check-versions:
     runs-on: ubuntu-latest
     steps:
