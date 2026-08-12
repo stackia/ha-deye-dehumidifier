@@ -98,7 +98,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         if any(device["platform"] == DeyeIotPlatform.Classic for device in device_list):
             await classic_mqtt_client.connect()
-        if any(device["platform"] == DeyeIotPlatform.Fog for device in device_list):
+        if any(device["platform"] != DeyeIotPlatform.Classic for device in device_list):
             await fog_mqtt_client.connect()
 
         coordinator_map: dict[str, DeyeDataUpdateCoordinator] = {}
