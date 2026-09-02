@@ -43,6 +43,9 @@ _FEATURE_FLAG_SWITCHES = (
     ),
 )
 
+# Coordinator is used to centralize the data updates
+PARALLEL_UPDATES = 0
+
 
 def _feature_flag_enabled(
     feature_config: DeyeProductConfig,
@@ -62,13 +65,14 @@ async def async_setup_entry(
     """Add switches for passed config_entry in HA."""
     data = hass.data[DATA_KEY][config_entry.entry_id]
 
+    entities: list[SwitchEntity] = []
     for device in data.device_list:
         feature_config = get_product_feature_config(device["product_id"])
         coordinator = data.coordinator_map[device["device_id"]]
-        entities: list[SwitchEntity] = [
+        entities.extend(
             DeyeConfigSwitch(coordinator, device, spec)
             for spec in _ALWAYS_ON_FLAG_SWITCHES
-        ]
+        )
         entities.append(
             DeyeContinuousSwitch(
                 coordinator,
@@ -81,7 +85,7 @@ async def async_setup_entry(
             for spec in _FEATURE_FLAG_SWITCHES
             if _feature_flag_enabled(feature_config, spec)
         )
-        async_add_entities(entities)
+    async_add_entities(entities)
 
 
 class DeyeConfigSwitch(DeyeEntity, SwitchEntity):

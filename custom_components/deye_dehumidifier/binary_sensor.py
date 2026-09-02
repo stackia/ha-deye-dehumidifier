@@ -16,6 +16,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
+# Coordinator is used to centralize the data updates
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -24,9 +27,11 @@ async def async_setup_entry(
 ) -> None:
     """Add sensors for passed config_entry in HA."""
     data = hass.data[DATA_KEY][config_entry.entry_id]
-    for device in data.device_list:
-        async_add_entities(
-            [
+    async_add_entities(
+        [
+            sensor
+            for device in data.device_list
+            for sensor in (
                 DeyeWaterTankBinarySensor(
                     data.coordinator_map[device["device_id"]],
                     device,
@@ -35,8 +40,9 @@ async def async_setup_entry(
                     data.coordinator_map[device["device_id"]],
                     device,
                 ),
-            ]
-        )
+            )
+        ]
+    )
 
 
 class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):

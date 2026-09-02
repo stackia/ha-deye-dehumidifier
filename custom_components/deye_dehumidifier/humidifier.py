@@ -28,6 +28,9 @@ MODE_MANUAL_PURIFIER = "manual_purifier"
 MODE_SLEEP_PURIFIER = "sleep_purifier"
 MODE_AUTO_PURIFIER = "auto_purifier"
 
+# Coordinator is used to centralize the data updates
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -36,13 +39,15 @@ async def async_setup_entry(
 ) -> None:
     """Add dehumidifiers for passed config_entry in HA."""
     data = hass.data[DATA_KEY][config_entry.entry_id]
-
-    for device in data.device_list:
-        deye_dehumidifier = DeyeDehumidifier(
-            data.coordinator_map[device["device_id"]],
-            device,
-        )
-        async_add_entities([deye_dehumidifier])
+    async_add_entities(
+        [
+            DeyeDehumidifier(
+                data.coordinator_map[device["device_id"]],
+                device,
+            )
+            for device in data.device_list
+        ]
+    )
 
 
 class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
