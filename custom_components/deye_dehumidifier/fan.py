@@ -68,13 +68,13 @@ class DeyeFan(DeyeEntity, FanEntity):
     @override
     def is_on(self) -> bool:
         """Return true if the entity is on."""
-        return self.coordinator.data.state.power_switch
+        return bool(self.coordinator.data.state.power_switch)
 
     @property
     @override
     def oscillating(self) -> bool:
         """Return whether or not the fan is currently oscillating."""
-        return self.coordinator.data.state.oscillating_switch
+        return bool(self.coordinator.data.state.oscillating_switch)
 
     @property
     @override

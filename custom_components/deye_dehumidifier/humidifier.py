@@ -93,7 +93,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     @override
     def is_on(self) -> bool:
         """Return True if device is on."""
-        return self.coordinator.data.state.power_switch
+        return bool(self.coordinator.data.state.power_switch)
 
     @property
     @override
