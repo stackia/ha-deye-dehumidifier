@@ -90,10 +90,11 @@ def _serialize_value(value: object) -> object:
 
 def _platform_label(device: DeyeApiResponseDeviceInfo) -> str:
     """Return Classic / Fog / FogCombo from the device-list platform id."""
+    platform = device.get("platform")
     try:
-        return DeyeIotPlatform(int(device["platform"])).name
-    except (TypeError, ValueError):
-        return _enum_name(device["platform"])
+        return DeyeIotPlatform(int(platform)).name
+    except TypeError, ValueError:
+        return _enum_name(platform)
 
 
 def _device_metadata(device: DeyeApiResponseDeviceInfo) -> dict[str, Any]:
@@ -131,7 +132,10 @@ def _mqtt_clients_snapshot(client: object) -> list[dict[str, Any]]:
     if not isinstance(mqtt_by_type, dict):
         return []
     snapshots: list[dict[str, Any]] = []
-    for client_cls, mqtt_client in mqtt_by_type.items():
+    for client_cls, mqtt_client in sorted(
+        mqtt_by_type.items(),
+        key=lambda item: getattr(item[0], "__name__", ""),
+    ):
         snapshots.append(
             {
                 "type": getattr(client_cls, "__name__", type(mqtt_client).__name__),
@@ -202,7 +206,8 @@ def _match_device(
     if device_entry.serial_number:
         macs.add(device_entry.serial_number)
     for device in devices:
-        if device["mac"] in macs:
+        mac = device.get("mac")
+        if mac is not None and mac in macs:
             return device
     return None
 
