@@ -15,7 +15,11 @@ from libdeye.cloud_api import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    HomeAssistantError,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -39,6 +43,25 @@ _LOGGER = logging.getLogger(__name__)
 DATA_KEY: HassKey[dict[str, ConfigEntryData]] = HassKey(DOMAIN)
 
 _DEHUMIDIFIER_PRODUCT_TYPES = {"dehumidifier", "除湿机", "其他"}
+
+
+def _wrap_command_exception(err: Exception) -> HomeAssistantError:
+    """Convert a device command failure into a translated HomeAssistantError."""
+    if isinstance(err, DeyeCloudApiCannotConnectError):
+        return HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="command_cannot_connect",
+        )
+    if isinstance(err, DeyeCloudApiInvalidAuthError):
+        return HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="command_invalid_auth",
+        )
+    return HomeAssistantError(
+        translation_domain=DOMAIN,
+        translation_key="command_failed",
+        translation_placeholders={"error": str(err) or type(err).__name__},
+    )
 
 
 @dataclass
@@ -144,9 +167,14 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
     async def _publish_command(self) -> None:
         """Publish commands to the device."""
         command = self.coordinator.data.state.to_command()
-        await self.coordinator.device.apply(
-            command, baseline=self.coordinator.data.reported_state
-        )
+        try:
+            await self.coordinator.device.apply(
+                command, baseline=self.coordinator.data.reported_state
+            )
+        except HomeAssistantError:
+            raise
+        except Exception as err:
+            raise _wrap_command_exception(err) from err
         self.coordinator.sync_reported_state_after_publish()
 
     async def publish_command_from_current_state(self) -> None:

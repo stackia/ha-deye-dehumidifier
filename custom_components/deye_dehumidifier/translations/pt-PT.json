@@ -114,5 +114,16 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "command_cannot_connect": {
+      "message": "Falha na ligação à nuvem Deye ao enviar um comando"
+    },
+    "command_invalid_auth": {
+      "message": "Falha na autenticação ao enviar um comando para o dispositivo"
+    },
+    "command_failed": {
+      "message": "Falha ao enviar comando para o dispositivo: {error}"
+    }
   }
 }

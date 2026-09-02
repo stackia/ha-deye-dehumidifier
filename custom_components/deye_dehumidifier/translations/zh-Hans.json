@@ -114,5 +114,16 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "command_cannot_connect": {
+      "message": "向设备发送指令时无法连接德业云"
+    },
+    "command_invalid_auth": {
+      "message": "向设备发送指令时身份认证失败"
+    },
+    "command_failed": {
+      "message": "向设备发送指令失败：{error}"
+    }
   }
 }
