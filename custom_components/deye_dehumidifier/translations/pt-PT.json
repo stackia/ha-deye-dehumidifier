@@ -100,7 +100,18 @@
     },
     "fan": {
       "fan": {
-        "name": "Velocidade do vento"
+        "name": "Velocidade do vento",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "low": "Baixa",
+              "medium": "Média",
+              "high": "Alta",
+              "full": "Máxima",
+              "auto": "Automático"
+            }
+          }
+        }
       }
     }
   }

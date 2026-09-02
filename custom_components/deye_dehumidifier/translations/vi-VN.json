@@ -100,7 +100,18 @@
     },
     "fan": {
       "fan": {
-        "name": "Tốc độ gió"
+        "name": "Tốc độ gió",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "low": "Thấp",
+              "medium": "Trung bình",
+              "high": "Cao",
+              "full": "Tối đa",
+              "auto": "Tự động"
+            }
+          }
+        }
       }
     }
   }

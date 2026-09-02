@@ -100,7 +100,18 @@
     },
     "fan": {
       "fan": {
-        "name": "Wind Speed"
+        "name": "Wind Speed",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High",
+              "full": "Full",
+              "auto": "Auto"
+            }
+          }
+        }
       }
     }
   }
