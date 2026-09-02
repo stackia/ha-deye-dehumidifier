@@ -41,7 +41,7 @@
         "state_attributes": {
           "mode": {
             "state": {
-              "manual": "手动",
+              "normal": "正常",
               "auto": "自动",
               "sleep": "睡眠",
               "air_purifier": "净化",

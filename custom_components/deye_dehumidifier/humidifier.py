@@ -4,13 +4,14 @@ from typing import Any, override
 
 from libdeye.cloud_api import DeyeApiResponseDeviceInfo
 from libdeye.const import DeyeDeviceMode, get_product_feature_config
-from libdeye.device_state import DeyeDeviceState
 
-from homeassistant.components.humidifier import HumidifierDeviceClass, HumidifierEntity
-from homeassistant.components.humidifier.const import (
+from homeassistant.components.humidifier import (
     MODE_AUTO,
+    MODE_NORMAL,
     MODE_SLEEP,
     HumidifierAction,
+    HumidifierDeviceClass,
+    HumidifierEntity,
     HumidifierEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -20,7 +21,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
-MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
 MODE_CLOTHES_DRYER = "clothes_dryer"
 MODE_TURBO = "turbo"
@@ -75,12 +75,9 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         )
         self._attr_min_humidity = feature_config["min_target_humidity"]
         self._attr_max_humidity = feature_config["max_target_humidity"]
+        # Deye UIs and official apps step target humidity in 5% increments.
+        self._attr_target_humidity_step = 5.0
         self._attr_entity_picture = device["picture_v3"] or device["product_icon"]
-
-    @property
-    def get_device_state(self) -> DeyeDeviceState:
-        """Return the current desired device state."""
-        return self.coordinator.data.state
 
     @property
     @override
@@ -159,7 +156,7 @@ def deye_mode_to_hass_mode(mode: DeyeDeviceMode) -> str:
         return MODE_SLEEP_PURIFIER
     if mode == DeyeDeviceMode.AUTO_PURIFIER_MODE:
         return MODE_AUTO_PURIFIER
-    return MODE_MANUAL
+    return MODE_NORMAL
 
 
 def hass_mode_to_deye_mode(mode: str) -> DeyeDeviceMode:

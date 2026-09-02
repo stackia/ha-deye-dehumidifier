@@ -41,7 +41,7 @@
         "state_attributes": {
           "mode": {
             "state": {
-              "manual": "Manual",
+              "normal": "Normal",
               "auto": "Automático",
               "sleep": "Sono",
               "air_purifier": "Purificar",
