@@ -61,7 +61,6 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
         super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-water-tank"
-        self.entity_id = f"binary_sensor.{self.entity_id_base}_water_tank"
 
     @property
     @override
@@ -86,7 +85,6 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
         super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-defrosting"
-        self.entity_id = f"binary_sensor.{self.entity_id_base}_defrosting"
 
     @property
     @override

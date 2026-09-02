@@ -84,7 +84,6 @@ class DeyeFan(DeyeEntity, FanEntity):
         super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-fan"
-        self.entity_id = f"fan.{self.entity_id_base}_fan"
         feature_config = get_product_feature_config(device["product_id"])
         self._attr_supported_features = (
             FanEntityFeature.SET_SPEED

@@ -142,7 +142,6 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
         self._device = device
         self._attr_has_entity_name = True
         self._attr_unique_id = self._device["mac"]
-        self.entity_id_base = f"deye_{self._device['mac'].lower()}"  # We will override HA generated entity ID
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._device["mac"])},
             model=self._device["product_name"],

@@ -66,7 +66,6 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-dehumidifier"
-        self.entity_id = f"humidifier.{self.entity_id_base}_dehumidifier"
         feature_config = get_product_feature_config(device["product_id"])
         if len(feature_config["mode"]) > 0:
             self._attr_supported_features = HumidifierEntityFeature.MODES
