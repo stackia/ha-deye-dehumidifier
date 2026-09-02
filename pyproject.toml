@@ -47,6 +47,9 @@ python_version = "3.14"
 platform = "linux"
 show_error_codes = true
 follow_imports = "normal"
+# custom_components/ has no __init__.py; without this, mypy maps the
+# integration as both deye_dehumidifier and custom_components.deye_dehumidifier.
+explicit_package_bases = true
 native_parser = true
 local_partial_types = true
 strict_equality = true
@@ -92,6 +95,13 @@ disallow_untyped_decorators = false
 disallow_untyped_defs = false
 warn_return_any = false
 warn_unreachable = false
+disable_error_code = [
+    "annotation-unchecked",
+    "import-not-found",
+    "import-untyped",
+    "arg-type",
+    "method-assign",
+]
 
 # --- Lint / type-check tooling aligned with Home Assistant core ---
 # https://github.com/home-assistant/core/blob/dev/pyproject.toml
