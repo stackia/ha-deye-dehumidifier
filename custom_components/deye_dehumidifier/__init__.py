@@ -28,6 +28,11 @@ from homeassistant.util import ssl
 
 from .const import CONF_AUTH_TOKEN, CONF_PASSWORD, CONF_USERNAME, DOMAIN, MANUFACTURER
 from .data_coordinator import DeyeDataUpdateCoordinator
+from .issues import (
+    MqttDisconnectMonitor,
+    async_delete_entry_issues,
+    async_sync_unknown_product_issues,
+)
 
 PLATFORMS: list[Platform] = [
     Platform.HUMIDIFIER,
@@ -68,6 +73,7 @@ class ConfigEntryData:
     client: DeyeClient
     device_list: list[DeyeApiResponseDeviceInfo]
     coordinator_map: dict[str, DeyeDataUpdateCoordinator]
+    mqtt_monitor: MqttDisconnectMonitor | None = None
 
 
 type DeyeConfigEntry = ConfigEntry[ConfigEntryData]
@@ -108,11 +114,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool
     except DeyeCloudApiCannotConnectError as err:
         raise ConfigEntryNotReady from err
 
+    device_infos = [device.info for device in devices]
+    mqtt_monitor = MqttDisconnectMonitor(hass, entry.entry_id, client)
     entry.runtime_data = ConfigEntryData(
         client=client,
-        device_list=[device.info for device in devices],
+        device_list=device_infos,
         coordinator_map=coordinator_map,
+        mqtt_monitor=mqtt_monitor,
     )
+
+    async_sync_unknown_product_issues(hass, entry.entry_id, device_infos)
+    mqtt_monitor.async_start()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -122,11 +134,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool
 async def async_unload_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        for coordinator in entry.runtime_data.coordinator_map.values():
+        data = entry.runtime_data
+        if data.mqtt_monitor is not None:
+            data.mqtt_monitor.async_stop()
+        async_delete_entry_issues(hass, entry.entry_id)
+        for coordinator in data.coordinator_map.values():
             coordinator.unsubscribe()
-        entry.runtime_data.client.disconnect()
+        data.client.disconnect()
 
     return unload_ok
+
+
+def deye_device_configuration_url(
+    _device: DeyeApiResponseDeviceInfo,
+) -> str | None:
+    """Return a stable Deye cloud/app configuration URL if one exists.
+
+    Deye Smart (德业智能) is a mobile app. The end-user API host
+    ``api.deye.com.cn`` is not a user-facing configuration UI, and
+    deyecloud.com is the inverter portal (a different product line).
+    Device-list entries do not include a web configuration URL, so this
+    returns None rather than inventing a broken link.
+    """
+    return None
 
 
 class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
@@ -142,7 +172,7 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
         self._device = device
         self._attr_has_entity_name = True
         self._attr_unique_id = self._device["mac"]
-        self._attr_device_info = DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, self._device["mac"])},
             model=self._device["product_name"],
             model_id=self._device["product_id"],
@@ -150,6 +180,9 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
             manufacturer=MANUFACTURER,
             name=self._device["device_name"],
         )
+        if configuration_url := deye_device_configuration_url(self._device):
+            device_info["configuration_url"] = configuration_url
+        self._attr_device_info = device_info
         self._debounced_publish_command = Debouncer(
             hass=self.coordinator.hass,
             logger=_LOGGER,

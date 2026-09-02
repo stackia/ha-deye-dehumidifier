@@ -125,5 +125,15 @@
     "command_failed": {
       "message": "Falha ao enviar comando para o dispositivo: {error}"
     }
+  },
+  "issues": {
+    "unknown_product": {
+      "title": "Modelo de desumidificador Deye desconhecido",
+      "description": "O dispositivo **{name}** ({product_name}, ID de produto `{product_id}`) não está na lista de produtos conhecidos, por isso esta integração está a usar um conjunto de funcionalidades predefinido. Alguns controlos podem faltar ou ser extra.\n\nAbra um issue no GitHub com este ID de produto para que o suporte específico do modelo possa ser adicionado."
+    },
+    "mqtt_disconnected": {
+      "title": "Ligação MQTT Deye perdida",
+      "description": "Esta integração está desligada do serviço MQTT da Deye há mais de {minutes} minutos. O estado do dispositivo não será atualizado até a ligação ser restabelecida.\n\nVerifique a ligação à Internet e o estado da nuvem Deye e, se não recuperar automaticamente, recarregue a integração."
+    }
   }
 }

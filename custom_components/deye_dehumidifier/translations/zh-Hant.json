@@ -125,5 +125,15 @@
     "command_failed": {
       "message": "向裝置傳送指令失敗：{error}"
     }
+  },
+  "issues": {
+    "unknown_product": {
+      "title": "未知的德業除濕機型號",
+      "description": "裝置 **{name}**（{product_name}，產品 ID `{product_id}`）不在已知產品清單中，因此本整合正在使用通用預設功能設定。部分控制項可能缺失或多餘。\n\n請在 GitHub 提交 issue 並附上該產品 ID，以便新增針對該型號的支援。"
+    },
+    "mqtt_disconnected": {
+      "title": "德業 MQTT 連線已中斷",
+      "description": "本整合與德業 MQTT 服務的連線已中斷超過 {minutes} 分鐘。在連線恢復之前，裝置狀態不會更新。\n\n請檢查網路連線和德業雲端服務狀態；如果未能自動恢復，請重新載入此整合。"
+    }
   }
 }

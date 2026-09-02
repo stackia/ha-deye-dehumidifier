@@ -125,5 +125,15 @@
     "command_failed": {
       "message": "Không gửi được lệnh tới thiết bị: {error}"
     }
+  },
+  "issues": {
+    "unknown_product": {
+      "title": "Mẫu máy hút ẩm Deye chưa được hỗ trợ",
+      "description": "Thiết bị **{name}** ({product_name}, product ID `{product_id}`) không có trong danh sách sản phẩm đã biết, nên tích hợp đang dùng cấu hình tính năng mặc định. Một số điều khiển có thể thiếu hoặc thừa.\n\nVui lòng mở issue trên GitHub kèm product ID này để bổ sung hỗ trợ cho mẫu máy."
+    },
+    "mqtt_disconnected": {
+      "title": "Mất kết nối MQTT Deye",
+      "description": "Tích hợp đã mất kết nối với dịch vụ MQTT của Deye hơn {minutes} phút. Trạng thái thiết bị sẽ không cập nhật cho đến khi kết nối được khôi phục.\n\nHãy kiểm tra kết nối Internet và trạng thái Deye cloud, rồi tải lại tích hợp nếu không tự phục hồi."
+    }
   }
 }
