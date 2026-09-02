@@ -34,12 +34,14 @@
           "mode": {
             "state": {
               "manual": "Manual",
-              "air_purifier": "Air Purifier",
-              "clothes_dryer": "Clothes Dryer",
+              "auto": "Automatic",
+              "sleep": "Sleep",
+              "air_purifier": "Purify",
+              "clothes_dryer": "Drying",
               "turbo": "Strong",
-              "manual_purifier": "Manual Purifier",
-              "sleep_purifier": "Sleep Purifier",
-              "auto_purifier": "Auto Purifier"
+              "manual_purifier": "Manual Purification",
+              "sleep_purifier": "Sleep Purification",
+              "auto_purifier": "Auto Purification"
             }
           }
         }
@@ -47,15 +49,15 @@
     },
     "sensor": {
       "temperature": {
-        "name": "Temperature"
+        "name": "Indoor Temperature"
       },
       "humidity": {
-        "name": "Humidity"
+        "name": "Indoor Humidity"
       }
     },
     "switch": {
       "continuous": {
-        "name": "Continuous Dehumidify"
+        "name": "Continuous Dehumidification"
       },
       "child_lock": {
         "name": "Child Lock"
@@ -64,7 +66,16 @@
         "name": "Anion"
       },
       "water_pump": {
-        "name": "Water Pump"
+        "name": "Water Pump Drain"
+      },
+      "uv": {
+        "name": "UV Light"
+      },
+      "prompt_sound": {
+        "name": "Prompt Sound"
+      },
+      "screen_display": {
+        "name": "Screen Display"
       }
     },
     "binary_sensor": {
@@ -76,12 +87,12 @@
         }
       },
       "defrosting": {
-        "name": "Defrosting"
+        "name": "Defrost Indication"
       }
     },
     "fan": {
       "fan": {
-        "name": "Fan"
+        "name": "Wind Speed"
       }
     }
   }
