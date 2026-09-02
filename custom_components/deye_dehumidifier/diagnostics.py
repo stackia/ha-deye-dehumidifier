@@ -1,5 +1,6 @@
 """Diagnostics support for the Deye Dehumidifier integration."""
 
+from collections.abc import Mapping
 from enum import Enum
 from typing import Any
 
@@ -89,21 +90,17 @@ def _serialize_value(value: object) -> object:
 
 def _platform_label(device: DeyeApiResponseDeviceInfo) -> str:
     """Return Classic / Fog / FogCombo from the device-list platform id."""
-    platform = device["platform"]
-    if isinstance(platform, DeyeIotPlatform):
-        return platform.name
     try:
-        return DeyeIotPlatform(platform).name
-    except ValueError:
-        return str(platform)
+        return DeyeIotPlatform(int(device["platform"])).name
+    except TypeError, ValueError:
+        return _enum_name(device["platform"])
 
 
 def _device_metadata(device: DeyeApiResponseDeviceInfo) -> dict[str, Any]:
     """Return non-secret device-list fields plus Classic/Fog labels."""
+    raw: Mapping[str, Any] = device
     metadata = {
-        key: _serialize_value(device[key])
-        for key in _DEVICE_METADATA_KEYS
-        if key in device
+        key: _serialize_value(raw[key]) for key in _DEVICE_METADATA_KEYS if key in raw
     }
     metadata["platform"] = _platform_label(device)
     metadata["transport"] = _enum_name(transport_for_device(device))
