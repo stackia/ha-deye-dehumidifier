@@ -225,6 +225,16 @@ async def async_get_config_entry_diagnostics(
                 "version": entry.version,
                 "data": dict(entry.data),
                 "options": dict(entry.options),
+                "subentries": [
+                    {
+                        "subentry_id": subentry.subentry_id,
+                        "subentry_type": subentry.subentry_type,
+                        "title": subentry.title,
+                        "unique_id": subentry.unique_id,
+                        "data": dict(subentry.data),
+                    }
+                    for subentry in entry.subentries.values()
+                ],
             },
             "mqtt_clients": _mqtt_clients_snapshot(data.client),
             "devices": [

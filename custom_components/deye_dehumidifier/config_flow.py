@@ -140,7 +140,7 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
                 data_schema=STEP_REAUTH_DATA_SCHEMA,
                 description_placeholders={"username": username},
             )
-        user_input[CONF_USERNAME] = username
+        user_input = {**user_input, CONF_USERNAME: username}
         result = await validate_input(self.hass, user_input)
         if "errors" in result:
             return self.async_show_form(
@@ -172,7 +172,7 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
                 data_schema=STEP_REAUTH_DATA_SCHEMA,
                 description_placeholders={"username": username},
             )
-        user_input[CONF_USERNAME] = username
+        user_input = {**user_input, CONF_USERNAME: username}
         result = await validate_input(self.hass, user_input)
         if "errors" in result:
             return self.async_show_form(

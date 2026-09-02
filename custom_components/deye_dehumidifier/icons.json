@@ -10,7 +10,10 @@
               "sleep": "mdi:power-sleep",
               "air_purifier": "mdi:air-purifier",
               "clothes_dryer": "mdi:hanger",
-              "turbo": "mdi:fan-plus"
+              "turbo": "mdi:fan-plus",
+              "manual_purifier": "mdi:air-filter",
+              "sleep_purifier": "mdi:power-sleep",
+              "auto_purifier": "mdi:air-purifier"
             }
           }
         }
