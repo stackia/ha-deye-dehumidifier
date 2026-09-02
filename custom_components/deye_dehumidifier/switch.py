@@ -27,7 +27,8 @@ class _FlagSwitchSpec(NamedTuple):
 
 
 # Child lock is always created. The rest follow product JSON gates, the
-# same as anion (including uv / prompt_sound / screen_display). Continuous
+# same as anion (including uv / prompt_sound / screen_display). Fog JSON
+# still skips null Integers, matching official sendCommand. Continuous
 # dehumidify is not a device flag and stays on DeyeContinuousSwitch.
 _ALWAYS_ON_FLAG_SWITCHES = (
     _FlagSwitchSpec("child_lock", "child-lock", "child_lock_switch"),
@@ -86,8 +87,8 @@ async def async_setup_entry(
 class DeyeConfigSwitch(DeyeEntity, SwitchEntity):
     """Boolean configuration switch (child lock, anion, UV, …).
 
-    Product JSON only gates whether the entity is created. State and
-    command fields are first-class bools, the same as child lock.
+    Product JSON only gates whether the entity is created. Fog GET may
+    omit the key; ``is_on`` treats that as off. Serialize skips nulls.
     """
 
     _attr_device_class = SwitchDeviceClass.SWITCH
