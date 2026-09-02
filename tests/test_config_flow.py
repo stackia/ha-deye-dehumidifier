@@ -14,7 +14,7 @@ from custom_components.deye_dehumidifier.const import (
     CONF_USERNAME,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER
+from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_RECONFIGURE, SOURCE_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from tests.helpers import (
@@ -105,6 +105,7 @@ async def test_user_already_configured(
         unique_id=MOCK_USER_ID,
         data=MOCK_CONFIG,
         title=MOCK_USERNAME,
+        version=2,
     )
     entry.add_to_hass(hass)
 
@@ -133,6 +134,7 @@ async def test_reauth_success(
             CONF_AUTH_TOKEN: "old-token",
         },
         title=MOCK_USERNAME,
+        version=2,
     )
     entry.add_to_hass(hass)
 
@@ -160,6 +162,50 @@ async def test_reauth_success(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_PASSWORD] == MOCK_PASSWORD
+    assert entry.data[CONF_AUTH_TOKEN] == MOCK_AUTH_TOKEN
+    mock_deye_cloud_api.authenticate.assert_awaited_once()
+
+
+async def test_reconfigure_success(
+    hass: HomeAssistant, mock_deye_cloud_api: MagicMock
+) -> None:
+    """Reconfigure with a valid password updates the entry and aborts."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=MOCK_USER_ID,
+        data={
+            CONF_USERNAME: MOCK_USERNAME,
+            CONF_PASSWORD: "old-password",
+            CONF_AUTH_TOKEN: "old-token",
+        },
+        title=MOCK_USERNAME,
+        version=2,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": SOURCE_RECONFIGURE,
+            "entry_id": entry.entry_id,
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+
+    with patch(
+        "custom_components.deye_dehumidifier.async_setup_entry",
+        return_value=True,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_PASSWORD: MOCK_PASSWORD},
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
     assert entry.data[CONF_PASSWORD] == MOCK_PASSWORD
     assert entry.data[CONF_AUTH_TOKEN] == MOCK_AUTH_TOKEN
     mock_deye_cloud_api.authenticate.assert_awaited_once()
