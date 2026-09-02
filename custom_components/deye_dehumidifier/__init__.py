@@ -11,7 +11,6 @@ from libdeye.cloud_api import (
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
 )
-from libdeye.device_state import DeyeDeviceState
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -147,41 +146,9 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
         """Publish commands to the device."""
         command = self.coordinator.data.state.to_command()
         await self.coordinator.device.apply(
-            command, baseline=self._baseline_for_optional_extras()
+            command, baseline=self.coordinator.data.reported_state
         )
         self.coordinator.sync_reported_state_after_publish()
-
-    def _baseline_for_optional_extras(self) -> DeyeDeviceState:
-        """Make optional Fog extras diffable against libdeye 3.0.1.
-
-        ``DeyeDeviceCommand.to_json_diff`` looks up every command key on the
-        baseline JSON. Keys still ``None`` (GET never reported them) are
-        omitted, which raises ``KeyError`` on the first user toggle. Invert a
-        missing extra on a copied baseline so the desired value is published.
-        """
-        desired = self.coordinator.data.state
-        baseline = self.coordinator.data.reported_state
-        extras: tuple[str, ...] = (
-            "uv_switch",
-            "prompt_sound",
-            "screen_display",
-            "timed_off_hour",
-        )
-        if not any(
-            getattr(desired, attr) is not None and getattr(baseline, attr) is None
-            for attr in extras
-        ):
-            return baseline
-
-        patched = baseline.copy()
-        for attr in extras:
-            desired_value = getattr(desired, attr)
-            if desired_value is not None and getattr(patched, attr) is None:
-                if isinstance(desired_value, bool):
-                    setattr(patched, attr, not desired_value)
-                else:
-                    setattr(patched, attr, desired_value + 1)
-        return patched
 
     async def publish_command_from_current_state(self) -> None:
         """Publish a command generated from the current desired state.

@@ -1,9 +1,9 @@
 """Platform for dehumidifier switch entities."""
 
-from typing import Any, override
+from typing import Any, Literal, NamedTuple, override
 
 from libdeye.cloud_api import DeyeApiResponseDeviceInfo
-from libdeye.const import DeyeDeviceMode, get_product_feature_config
+from libdeye.const import DeyeDeviceMode, DeyeProductConfig, get_product_feature_config
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -13,6 +13,44 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
+
+
+class _FlagSwitchSpec(NamedTuple):
+    """One boolean config switch bound to a DeyeDeviceState attribute."""
+
+    translation_key: str
+    unique_suffix: str
+    state_attr: str
+    feature_key: (
+        Literal["anion", "water_pump", "uv", "prompt_sound", "screen_display"] | None
+    ) = None
+
+
+# Child lock is always created. The rest follow product JSON gates, including
+# Fog extras (uv / prompt_sound / screen_display). Continuous dehumidify is
+# not a device flag and stays on DeyeContinuousSwitch.
+_ALWAYS_ON_FLAG_SWITCHES = (
+    _FlagSwitchSpec("child_lock", "child-lock", "child_lock_switch"),
+)
+_FEATURE_FLAG_SWITCHES = (
+    _FlagSwitchSpec("anion", "anion", "anion_switch", "anion"),
+    _FlagSwitchSpec("water_pump", "water-pump", "water_pump_switch", "water_pump"),
+    _FlagSwitchSpec("uv", "uv", "uv_switch", "uv"),
+    _FlagSwitchSpec("prompt_sound", "prompt-sound", "prompt_sound", "prompt_sound"),
+    _FlagSwitchSpec(
+        "screen_display", "screen-display", "screen_display", "screen_display"
+    ),
+)
+
+
+def _feature_flag_enabled(
+    feature_config: DeyeProductConfig,
+    spec: _FlagSwitchSpec,
+) -> bool:
+    """Return True if this product JSON advertises the switch."""
+    if spec.feature_key is None:
+        return True
+    return bool(feature_config[spec.feature_key])
 
 
 async def async_setup_entry(
@@ -27,54 +65,31 @@ async def async_setup_entry(
         feature_config = get_product_feature_config(device["product_id"])
         coordinator = data.coordinator_map[device["device_id"]]
         entities: list[SwitchEntity] = [
-            DeyeChildLockSwitch(coordinator, device),
+            DeyeConfigSwitch(coordinator, device, spec)
+            for spec in _ALWAYS_ON_FLAG_SWITCHES
+        ]
+        entities.append(
             DeyeContinuousSwitch(
                 coordinator,
                 device,
                 feature_config["min_target_humidity"],
-            ),
-        ]
-        if feature_config["anion"]:
-            entities.append(DeyeAnionSwitch(coordinator, device))
-        if feature_config["water_pump"]:
-            entities.append(DeyeWaterPumpSwitch(coordinator, device))
-        if feature_config["uv"]:
-            entities.append(
-                DeyeOptionalConfigSwitch(
-                    coordinator,
-                    device,
-                    translation_key="uv",
-                    unique_suffix="uv",
-                    state_attr="uv_switch",
-                )
             )
-        if feature_config["prompt_sound"]:
-            entities.append(
-                DeyeOptionalConfigSwitch(
-                    coordinator,
-                    device,
-                    translation_key="prompt_sound",
-                    unique_suffix="prompt-sound",
-                    state_attr="prompt_sound",
-                )
-            )
-        if feature_config["screen_display"]:
-            entities.append(
-                DeyeOptionalConfigSwitch(
-                    coordinator,
-                    device,
-                    translation_key="screen_display",
-                    unique_suffix="screen-display",
-                    state_attr="screen_display",
-                )
-            )
+        )
+        entities.extend(
+            DeyeConfigSwitch(coordinator, device, spec)
+            for spec in _FEATURE_FLAG_SWITCHES
+            if _feature_flag_enabled(feature_config, spec)
+        )
         async_add_entities(entities)
 
 
-class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
-    """Child lock switch entity."""
+class DeyeConfigSwitch(DeyeEntity, SwitchEntity):
+    """Boolean configuration switch (child lock, anion, extras, …).
 
-    _attr_translation_key = "child_lock"
+    Product JSON only gates whether the entity is created. Fog extras stay
+    ``None`` until GET reports them or the user toggles the switch.
+    """
+
     _attr_device_class = SwitchDeviceClass.SWITCH
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -82,108 +97,42 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
         self,
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
+        spec: _FlagSwitchSpec,
     ) -> None:
         """Initialize the switch."""
         super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
-        self._attr_unique_id += "-child-lock"
-        self.entity_id = f"switch.{self.entity_id_base}_child_lock"
+        self._attr_translation_key = spec.translation_key
+        self._attr_unique_id += f"-{spec.unique_suffix}"
+        self.entity_id = (
+            f"switch.{self.entity_id_base}_{spec.unique_suffix.replace('-', '_')}"
+        )
+        self._state_attr = spec.state_attr
 
     @property
     @override
-    def is_on(self) -> bool:
-        """Return True if the child lock is on."""
-        return self.coordinator.data.state.child_lock_switch
+    def is_on(self) -> bool | None:
+        """Return True/False, or unknown when the device has not reported the flag."""
+        value = getattr(self.coordinator.data.state, self._state_attr)
+        if isinstance(value, bool):
+            return value
+        return None
 
     @override
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the child lock on."""
-        self.coordinator.data.state.child_lock_switch = True
+        """Turn the switch on."""
+        setattr(self.coordinator.data.state, self._state_attr, True)
         await self.publish_command_from_current_state()
 
     @override
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn the child lock off."""
-        self.coordinator.data.state.child_lock_switch = False
-        await self.publish_command_from_current_state()
-
-
-class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
-    """Anion switch entity."""
-
-    _attr_translation_key = "anion"
-    _attr_device_class = SwitchDeviceClass.SWITCH
-    _attr_entity_category = EntityCategory.CONFIG
-
-    def __init__(
-        self,
-        coordinator: DeyeDataUpdateCoordinator,
-        device: DeyeApiResponseDeviceInfo,
-    ) -> None:
-        """Initialize the switch."""
-        super().__init__(coordinator, device)
-        assert self._attr_unique_id is not None
-        self._attr_unique_id += "-anion"
-        self.entity_id = f"switch.{self.entity_id_base}_anion"
-
-    @property
-    @override
-    def is_on(self) -> bool:
-        """Return True if the anion switch is on."""
-        return self.coordinator.data.state.anion_switch
-
-    @override
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the anion switch on."""
-        self.coordinator.data.state.anion_switch = True
-        await self.publish_command_from_current_state()
-
-    @override
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn the anion switch off."""
-        self.coordinator.data.state.anion_switch = False
-        await self.publish_command_from_current_state()
-
-
-class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
-    """Water pump switch entity."""
-
-    _attr_translation_key = "water_pump"
-    _attr_device_class = SwitchDeviceClass.SWITCH
-    _attr_entity_category = EntityCategory.CONFIG
-
-    def __init__(
-        self,
-        coordinator: DeyeDataUpdateCoordinator,
-        device: DeyeApiResponseDeviceInfo,
-    ) -> None:
-        """Initialize the switch."""
-        super().__init__(coordinator, device)
-        assert self._attr_unique_id is not None
-        self._attr_unique_id += "-water-pump"
-        self.entity_id = f"switch.{self.entity_id_base}_water_pump"
-
-    @property
-    @override
-    def is_on(self) -> bool:
-        """Return True if the water pump switch is on."""
-        return self.coordinator.data.state.water_pump_switch
-
-    @override
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the water pump on."""
-        self.coordinator.data.state.water_pump_switch = True
-        await self.publish_command_from_current_state()
-
-    @override
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn the water pump off."""
-        self.coordinator.data.state.water_pump_switch = False
+        """Turn the switch off."""
+        setattr(self.coordinator.data.state, self._state_attr, False)
         await self.publish_command_from_current_state()
 
 
 class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
-    """Continuous switch entity."""
+    """Continuous dehumidify, encoded as the product's minimum target humidity."""
 
     _attr_translation_key = "continuous"
     _attr_device_class = SwitchDeviceClass.SWITCH
@@ -229,55 +178,4 @@ class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the continuous switch off."""
         self.coordinator.data.state.target_humidity = 50
-        await self.publish_command_from_current_state()
-
-
-class DeyeOptionalConfigSwitch(DeyeEntity, SwitchEntity):
-    """Config switch for an optional Fog extra (UV, prompt sound, screen display).
-
-    Product JSON only gates whether the control is shown. The Fog value stays
-    ``None`` until GET reports it or the user toggles the entity.
-    """
-
-    _attr_device_class = SwitchDeviceClass.SWITCH
-    _attr_entity_category = EntityCategory.CONFIG
-
-    def __init__(
-        self,
-        coordinator: DeyeDataUpdateCoordinator,
-        device: DeyeApiResponseDeviceInfo,
-        *,
-        translation_key: str,
-        unique_suffix: str,
-        state_attr: str,
-    ) -> None:
-        """Initialize the switch."""
-        super().__init__(coordinator, device)
-        assert self._attr_unique_id is not None
-        self._attr_translation_key = translation_key
-        self._attr_unique_id += f"-{unique_suffix}"
-        self.entity_id = (
-            f"switch.{self.entity_id_base}_{unique_suffix.replace('-', '_')}"
-        )
-        self._state_attr = state_attr
-
-    @property
-    @override
-    def is_on(self) -> bool | None:
-        """Return True/False when the device reported the flag, else unknown."""
-        value = getattr(self.coordinator.data.state, self._state_attr)
-        if isinstance(value, bool):
-            return value
-        return None
-
-    @override
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the switch on."""
-        setattr(self.coordinator.data.state, self._state_attr, True)
-        await self.publish_command_from_current_state()
-
-    @override
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn the switch off."""
-        setattr(self.coordinator.data.state, self._state_attr, False)
         await self.publish_command_from_current_state()
