@@ -1,26 +1,33 @@
-import logging
-from datetime import datetime, timedelta
-from typing import NamedTuple
+"""Data update coordinator for Deye dehumidifier devices."""
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from datetime import datetime, timedelta
+import logging
+from typing import NamedTuple, override
+
 from libdeye.cloud_api import DeyeApiResponseDeviceInfo, DeyeCloudApi
 from libdeye.const import QUERY_DEVICE_STATE_COMMAND_CLASSIC
 from libdeye.device_state import DeyeDeviceState
 from libdeye.mqtt_client import BaseDeyeMqttClient, DeyeClassicMqttClient
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
 _LOGGER = logging.getLogger(__name__)
 
 
 class DeyeDeviceData(NamedTuple):
+    """Coordinator data for a single Deye device."""
+
     reported_state: DeyeDeviceState
     state: DeyeDeviceState
     available: bool
 
 
 class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
+    """Coordinator that keeps a Deye device's state in sync."""
+
     def __init__(
         self,
         hass: HomeAssistant,
@@ -29,6 +36,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         mqtt_client: BaseDeyeMqttClient,
         cloud_api: DeyeCloudApi,
     ) -> None:
+        """Initialize the coordinator."""
         super().__init__(
             hass,
             _LOGGER,
@@ -43,8 +51,9 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         self.state_update_muted: CALLBACK_TYPE | None = None
         self._device = device
 
+    @override
     async def _async_setup(self) -> None:
-        """Set up the coordinator"""
+        """Set up the coordinator."""
         reported_state = DeyeDeviceState(
             self._device["payload"]
             or "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
@@ -107,9 +116,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         )
 
     async def poll_device_state(self) -> DeyeDeviceData:
-        """
-        Some Deye devices have a very long heartbeat period. So polling is still necessary.
-        """
+        """Some Deye devices have a very long heartbeat period. So polling is still necessary."""
         if self.state_update_muted:
             return self.data
 

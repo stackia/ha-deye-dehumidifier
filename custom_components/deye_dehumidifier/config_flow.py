@@ -1,22 +1,23 @@
 """Config flow for Deye Dehumidifier integration."""
 
-from __future__ import annotations
-
-import logging
 from collections.abc import Mapping
-from typing import Any
+import logging
+from typing import Any, override
 
-import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.config_entries import ConfigFlow as ConfigFlowBase
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from libdeye.cloud_api import (
     DeyeCloudApi,
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
 )
+import voluptuous as vol
+
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow as ConfigFlowBase,
+    ConfigFlowResult,
+)
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_AUTH_TOKEN, CONF_PASSWORD, CONF_USERNAME, DOMAIN
 
@@ -69,6 +70,7 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
 
     _reauth_entry: ConfigEntry | None
 
+    @override
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -83,8 +85,7 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
                     title=result["title"],
                     data=result["data"],
                 )
-            else:
-                errors = result["errors"]
+            errors = result["errors"]
 
         return self.async_show_form(
             step_id="user",

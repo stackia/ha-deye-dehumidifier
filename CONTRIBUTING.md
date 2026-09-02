@@ -1,5 +1,9 @@
 # Contributing
 
+This repository uses the same Python 3.14 / Ruff / MyPy / Pylint toolchain as
+[Home Assistant core](https://github.com/home-assistant/core). Run
+`pre-commit run --all-files` after installing `.[dev]`.
+
 To setup a local development environment, here are the recommended workflow:
 
 1. Follow [instructions here](https://developers.home-assistant.io/docs/development_environment/#developing-with-visual-studio-code--devcontainer) to open the home-assistant/core repo in a VSCode devcontainer. If you are having trouble during repo cloning, try running `ssh-add` in your host machine.

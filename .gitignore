@@ -14,6 +14,8 @@ __pycache__/*
 */.ipynb_checkpoints/*
 .DS_Store
 .mypy_cache/
+.ruff_cache/
+.pylint.d/
 
 # Project files
 .ropeproject
@@ -51,4 +53,3 @@ MANIFEST
 # Per-project virtualenvs
 .venv*/
 .conda*/
-.python-version
