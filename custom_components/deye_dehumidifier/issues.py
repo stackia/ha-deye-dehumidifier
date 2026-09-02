@@ -64,6 +64,7 @@ def pooled_mqtt_clients_connected(client: DeyeClient) -> bool | None:
     return all(result is True for result in results)
 
 
+@callback
 def async_sync_unknown_product_issues(
     hass: HomeAssistant,
     entry_id: str,
@@ -105,6 +106,7 @@ def async_sync_unknown_product_issues(
             ir.async_delete_issue(hass, DOMAIN, issue_id)
 
 
+@callback
 def async_delete_entry_issues(hass: HomeAssistant, entry_id: str) -> None:
     """Delete all repairs created for a config entry."""
     ir.async_delete_issue(hass, DOMAIN, mqtt_disconnected_issue_id(entry_id))
@@ -127,6 +129,7 @@ class MqttDisconnectMonitor:
         self._unsub: CALLBACK_TYPE | None = None
         self._stopped = False
 
+    @callback
     def async_start(self) -> None:
         """Start periodic checks and evaluate the current connection."""
         self._stopped = False
@@ -161,9 +164,11 @@ class MqttDisconnectMonitor:
             now = dt_util.utcnow()
 
         connected = pooled_mqtt_clients_connected(self.client)
-        if connected is not False:
-            if connected is True:
-                self.async_clear()
+        if connected is True:
+            self.async_clear()
+            return
+        if connected is None:
+            self._disconnected_since = None
             return
 
         if self._disconnected_since is None:
@@ -173,6 +178,10 @@ class MqttDisconnectMonitor:
         if now - self._disconnected_since < MQTT_DISCONNECT_ISSUE_DELAY:
             return
 
+        issue_id = mqtt_disconnected_issue_id(self.entry_id)
+        if (DOMAIN, issue_id) in ir.async_get(self.hass).issues:
+            return
+
         minutes = str(int(MQTT_DISCONNECT_ISSUE_DELAY.total_seconds() // 60))
         _LOGGER.warning(
             "Deye MQTT has been disconnected for more than %s minutes", minutes
@@ -180,7 +189,7 @@ class MqttDisconnectMonitor:
         ir.async_create_issue(
             self.hass,
             DOMAIN,
-            mqtt_disconnected_issue_id(self.entry_id),
+            issue_id,
             is_fixable=False,
             severity=ir.IssueSeverity.ERROR,
             translation_key=ISSUE_MQTT_DISCONNECTED,
