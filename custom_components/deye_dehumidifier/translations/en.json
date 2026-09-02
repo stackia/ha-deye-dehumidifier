@@ -125,5 +125,15 @@
     "command_failed": {
       "message": "Failed to send command to the device: {error}"
     }
+  },
+  "issues": {
+    "unknown_product": {
+      "title": "Unknown Deye dehumidifier model",
+      "description": "The device **{name}** ({product_name}, product ID `{product_id}`) is not in the known product list, so this integration is using a generic default feature set. Some controls may be missing or extra.\n\nPlease open a GitHub issue with this product ID so model-specific support can be added."
+    },
+    "mqtt_disconnected": {
+      "title": "Deye MQTT connection lost",
+      "description": "This integration has been disconnected from Deye's MQTT service for more than {minutes} minutes. Device state will not update until the connection is restored.\n\nCheck your internet connection and Deye cloud status, then reload the integration if it does not recover on its own."
+    }
   }
 }
