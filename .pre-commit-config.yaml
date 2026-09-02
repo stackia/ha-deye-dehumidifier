@@ -20,7 +20,7 @@ repos:
           - --skip="./.*,*.csv,*.json"
           - --quiet-level=2
         exclude_types: [csv, json]
-        exclude: ^custom_components/.*/translations/
+        exclude: ^(uv\.lock|custom_components/.*/translations/)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

@@ -1,6 +1,96 @@
-[build-system]
-requires = ["setuptools>=46.1.0"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "ha-deye-dehumidifier"
+version = "2.1.8"
+description = "Home Assistant integration for Deye Dehumidifier"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+authors = [
+    { name = "Stackie Jia", email = "jsq2627@gmail.com" },
+]
+requires-python = ">=3.14.2"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Home Automation",
+]
+dependencies = [
+    "libdeye==2.1.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/stackia/ha-deye-dehumidifier/"
+Source = "https://github.com/stackia/ha-deye-dehumidifier/"
+
+[dependency-groups]
+dev = [
+    "pre-commit",
+    # Pinned to Home Assistant core requirements_test.txt / requirements_test_pre_commit.txt
+    "ruff==0.16.4",
+    "mypy==2.3.1",
+    "pylint==4.0.7",
+    "pylint-per-file-ignores==3.2.1",
+    "codespell==2.4.3",
+    "yamllint==1.38.0",
+    "homeassistant==2026.8.3",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+[tool.mypy]
+python_version = "3.14"
+platform = "linux"
+show_error_codes = true
+follow_imports = "normal"
+native_parser = true
+local_partial_types = true
+strict_equality = true
+strict_bytes = true
+no_implicit_optional = true
+warn_incomplete_stub = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+enable_error_code = [
+    "deprecated",
+    "explicit-override",
+    "ignore-without-code",
+    "redundant-self",
+    "truthy-iterable",
+]
+disable_error_code = [
+    "annotation-unchecked",
+    "import-not-found",
+    "import-untyped",
+]
+extra_checks = false
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "custom_components.*"
+no_implicit_reexport = true
+disallow_any_generics = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+check_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
+disallow_untyped_defs = false
+warn_return_any = false
+warn_unreachable = false
 
 # --- Lint / type-check tooling aligned with Home Assistant core ---
 # https://github.com/home-assistant/core/blob/dev/pyproject.toml

@@ -5,116 +5,128 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import cast
+import tomllib
+from typing import Any
 
 
-def _read_text(path: str) -> str:
-    """Read a UTF-8 text file from the repository root."""
-    return Path(path).read_text(encoding="utf-8")
+def load_pyproject() -> dict[str, Any]:
+    """Load project metadata from pyproject.toml."""
+    with Path("pyproject.toml").open("rb") as f:
+        return tomllib.load(f)
 
 
-def get_homeassistant_version_from_hacs() -> str | None:
-    """Get Home Assistant version from hacs.json."""
-    data = json.loads(_read_text("hacs.json"))
-    return cast(str, data.get("homeassistant"))
-
-
-def get_homeassistant_version_from_setup_cfg() -> str | None:
-    """Get Home Assistant version from setup.cfg."""
-    match = re.search(r"homeassistant==([0-9.]+)", _read_text("setup.cfg"))
-    if match:
-        return match.group(1)
+def get_project_dependency_version(pyproject: dict[str, Any], name: str) -> str | None:
+    """Get a pinned runtime dependency version from pyproject.toml."""
+    for dep in pyproject["project"].get("dependencies", []):
+        if isinstance(dep, str) and dep.startswith(f"{name}=="):
+            return dep.split("==", 1)[1]
     return None
+
+
+def get_dev_dependency_version(pyproject: dict[str, Any], name: str) -> str | None:
+    """Get a pinned dev dependency version from pyproject.toml."""
+    for dep in pyproject.get("dependency-groups", {}).get("dev", []):
+        if isinstance(dep, str) and dep.startswith(f"{name}=="):
+            return dep.split("==", 1)[1]
+    return None
+
+
+def get_requires_python(pyproject: dict[str, Any]) -> str | None:
+    """Get the minimum Python version from requires-python."""
+    requires = pyproject["project"].get("requires-python", "")
+    match = re.search(r">=([0-9.]+)", requires)
+    return match.group(1) if match else None
+
+
+def normalize_python_version(version: str | None) -> str | None:
+    """Normalize a Python version to major.minor for cross-file comparison."""
+    if version is None:
+        return None
+    parts = version.split(".")
+    if len(parts) >= 2:
+        return f"{parts[0]}.{parts[1]}"
+    return version
+
+
+def get_json_field(path: str, field: str) -> str | None:
+    """Get a string field from a JSON file."""
+    with Path(path).open(encoding="utf-8") as f:
+        data = json.load(f)
+    value = data.get(field)
+    return value if isinstance(value, str) else None
 
 
 def get_libdeye_version_from_manifest() -> str | None:
     """Get libdeye version from manifest.json."""
-    data = json.loads(_read_text("custom_components/deye_dehumidifier/manifest.json"))
+    with Path("custom_components/deye_dehumidifier/manifest.json").open(
+        encoding="utf-8"
+    ) as f:
+        data = json.load(f)
     for req in data.get("requirements", []):
-        if req.startswith("libdeye=="):
-            return cast(str, req.split("==")[1])
-    return None
-
-
-def get_libdeye_version_from_setup_cfg() -> str | None:
-    """Get libdeye version from setup.cfg."""
-    match = re.search(r"libdeye==([0-9.]+)", _read_text("setup.cfg"))
-    if match:
-        return match.group(1)
+        if isinstance(req, str) and req.startswith("libdeye=="):
+            return req.split("==", 1)[1]
     return None
 
 
 def get_python_version_from_precommit() -> str | None:
     """Get Python version from .pre-commit-config.yaml."""
-    match = re.search(r"python: python([0-9.]+)", _read_text(".pre-commit-config.yaml"))
-    if match:
-        return match.group(1)
-    return None
+    content = Path(".pre-commit-config.yaml").read_text(encoding="utf-8")
+    match = re.search(r"python: python([0-9.]+)", content)
+    return match.group(1) if match else None
 
 
-def get_python_version_from_mypy() -> str | None:
-    """Get Python version from mypy.ini."""
-    match = re.search(r"python_version = ([0-9.]+)", _read_text("mypy.ini"))
-    if match:
-        return match.group(1)
-    return None
-
-
-def get_python_version_from_workflow() -> str | None:
-    """Get Python version from test.yml."""
-    match = re.search(
-        r'python-version: "([0-9.]+)"', _read_text(".github/workflows/test.yml")
-    )
-    if match:
-        return match.group(1)
-    return None
-
-
-def get_python_version_from_setup_cfg() -> str | None:
-    """Get Python version from setup.cfg."""
-    match = re.search(r"python_requires = >=([0-9.]+)", _read_text("setup.cfg"))
-    if match:
-        return match.group(1)
-    return None
-
-
-def get_python_version_from_python_version_file() -> str | None:
+def get_python_version_file() -> str | None:
     """Get Python version from .python-version."""
-    return _read_text(".python-version").strip() or None
+    path = Path(".python-version")
+    if not path.exists():
+        return None
+    return path.read_text(encoding="utf-8").strip() or None
 
 
 def main() -> None:
     """Check version consistency."""
     errors: list[str] = []
+    pyproject = load_pyproject()
 
-    # Check Home Assistant version
-    ha_hacs = get_homeassistant_version_from_hacs()
-    ha_setup = get_homeassistant_version_from_setup_cfg()
-
-    if ha_hacs != ha_setup:
+    project_version = pyproject["project"].get("version")
+    manifest_version = get_json_field(
+        "custom_components/deye_dehumidifier/manifest.json", "version"
+    )
+    if project_version != manifest_version:
         errors.append(
-            f"Home Assistant version mismatch: {ha_hacs} (hacs.json) vs {ha_setup} (setup.cfg)"
+            "Integration version mismatch: "
+            f"{project_version} (pyproject.toml) vs {manifest_version} (manifest.json)"
         )
 
-    # Check libdeye version
+    ha_hacs = get_json_field("hacs.json", "homeassistant")
+    ha_dev = get_dev_dependency_version(pyproject, "homeassistant")
+    if ha_hacs != ha_dev:
+        errors.append(
+            "Home Assistant version mismatch: "
+            f"{ha_hacs} (hacs.json) vs {ha_dev} (pyproject.toml)"
+        )
+
     libdeye_manifest = get_libdeye_version_from_manifest()
-    libdeye_setup = get_libdeye_version_from_setup_cfg()
-
-    if libdeye_manifest != libdeye_setup:
+    libdeye_project = get_project_dependency_version(pyproject, "libdeye")
+    if libdeye_manifest != libdeye_project:
         errors.append(
-            f"libdeye version mismatch: {libdeye_manifest} (manifest.json) vs {libdeye_setup} (setup.cfg)"
+            "libdeye version mismatch: "
+            f"{libdeye_manifest} (manifest.json) vs {libdeye_project} (pyproject.toml)"
         )
 
-    # Check Python version - collect all versions
     python_versions: dict[str, str | None] = {
-        ".pre-commit-config.yaml": get_python_version_from_precommit(),
-        "mypy.ini": get_python_version_from_mypy(),
-        "test.yml": get_python_version_from_workflow(),
-        "setup.cfg": get_python_version_from_setup_cfg(),
-        ".python-version": get_python_version_from_python_version_file(),
+        ".pre-commit-config.yaml": normalize_python_version(
+            get_python_version_from_precommit()
+        ),
+        "pyproject.toml [tool.mypy]": normalize_python_version(
+            pyproject.get("tool", {}).get("mypy", {}).get("python_version")
+        ),
+        ".python-version": normalize_python_version(get_python_version_file()),
+        "pyproject.toml requires-python": normalize_python_version(
+            get_requires_python(pyproject)
+        ),
     }
 
-    # Use first non-None version as reference
     reference_file = None
     reference_version = None
     for file, version in python_versions.items():
@@ -123,12 +135,12 @@ def main() -> None:
             reference_version = version
             break
 
-    # Compare all versions to the reference
     if reference_version is not None:
         for file, version in python_versions.items():
             if version is not None and version != reference_version:
                 errors.append(
-                    f"Python version mismatch: {reference_version} ({reference_file}) vs {version} ({file})"
+                    f"Python version mismatch: {reference_version} ({reference_file}) "
+                    f"vs {version} ({file})"
                 )
 
     if errors:
