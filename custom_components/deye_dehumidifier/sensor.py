@@ -9,12 +9,11 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfRatio, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DATA_KEY, DeyeEntity
+from . import DeyeConfigEntry, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 # Coordinator is used to centralize the data updates
@@ -23,11 +22,11 @@ PARALLEL_UPDATES = 0
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    entry: DeyeConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Add sensors for passed config_entry in HA."""
-    data = hass.data[DATA_KEY][config_entry.entry_id]
+    """Add sensors for this config entry."""
+    data = entry.runtime_data
     async_add_entities(
         [
             sensor

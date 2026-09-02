@@ -6,12 +6,11 @@ from libdeye.cloud_api import DeyeApiResponseDeviceInfo
 from libdeye.const import DeyeDeviceMode, DeyeProductConfig, get_product_feature_config
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DATA_KEY, DeyeEntity
+from . import DeyeConfigEntry, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 
@@ -59,11 +58,11 @@ def _feature_flag_enabled(
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    entry: DeyeConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Add switches for passed config_entry in HA."""
-    data = hass.data[DATA_KEY][config_entry.entry_id]
+    """Add switches for this config entry."""
+    data = entry.runtime_data
 
     entities: list[SwitchEntity] = []
     for device in data.device_list:
