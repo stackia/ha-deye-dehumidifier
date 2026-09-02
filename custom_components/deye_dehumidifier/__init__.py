@@ -19,7 +19,6 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import ssl
 from homeassistant.util.hass_dict import HassKey
@@ -107,7 +106,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
+class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
     """Initiate Deye Base Class."""
 
     def __init__(
