@@ -114,5 +114,16 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "command_cannot_connect": {
+      "message": "Không thể kết nối tới đám mây Deye khi gửi lệnh"
+    },
+    "command_invalid_auth": {
+      "message": "Xác thực thất bại khi gửi lệnh tới thiết bị"
+    },
+    "command_failed": {
+      "message": "Không gửi được lệnh tới thiết bị: {error}"
+    }
   }
 }

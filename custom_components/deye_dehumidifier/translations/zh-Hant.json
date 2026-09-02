@@ -114,5 +114,16 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "command_cannot_connect": {
+      "message": "向裝置傳送指令時無法連線德業雲"
+    },
+    "command_invalid_auth": {
+      "message": "向裝置傳送指令時身份驗證失敗"
+    },
+    "command_failed": {
+      "message": "向裝置傳送指令失敗：{error}"
+    }
   }
 }

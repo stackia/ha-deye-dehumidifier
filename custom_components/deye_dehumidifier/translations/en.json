@@ -114,5 +114,16 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "command_cannot_connect": {
+      "message": "Failed to connect to the Deye cloud while sending a command"
+    },
+    "command_invalid_auth": {
+      "message": "Authentication failed while sending a command to the device"
+    },
+    "command_failed": {
+      "message": "Failed to send command to the device: {error}"
+    }
   }
 }
