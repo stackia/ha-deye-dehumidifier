@@ -22,6 +22,7 @@ from custom_components.deye_dehumidifier.data_coordinator import (
 )
 from custom_components.deye_dehumidifier.subentries import (
     async_ensure_device_subentries,
+    async_link_devices_to_subentries,
 )
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -350,6 +351,41 @@ def test_ensure_creates_subentries_only_when_none_exist() -> None:
     assert [subentry.unique_id for subentry in created] == ["dev-1"]
     assert skipped == []
     assert created_ids == ["dev-1"]
+
+
+def test_link_skips_entities_without_unique_id() -> None:
+    """Entity registry rows with unique_id=None must not break relinking."""
+    hass = MagicMock()
+    subentry = SimpleNamespace(
+        subentry_type=SUBENTRY_TYPE_DEVICE,
+        unique_id="dev-1",
+        data={"device_id": "dev-1", "mac": "aa:bb"},
+        title="Basement",
+        subentry_id="sub-1",
+    )
+    entry = SimpleNamespace(subentries={"sub-1": subentry}, entry_id="entry-1")
+    entity_entry = SimpleNamespace(unique_id=None, entity_id="sensor.x")
+    dev_reg = MagicMock()
+    dev_reg.async_get_device.return_value = None
+    ent_reg = MagicMock()
+
+    with (
+        patch(
+            "custom_components.deye_dehumidifier.subentries.dr.async_get",
+            return_value=dev_reg,
+        ),
+        patch(
+            "custom_components.deye_dehumidifier.subentries.er.async_get",
+            return_value=ent_reg,
+        ),
+        patch(
+            "custom_components.deye_dehumidifier.subentries.er.async_entries_for_config_entry",
+            return_value=[entity_entry],
+        ),
+    ):
+        async_link_devices_to_subentries(hass, entry)
+
+    ent_reg.async_update_entity.assert_not_called()
 
 
 def test_unconfigured_coordinator_is_shut_down() -> None:

@@ -101,7 +101,9 @@ def async_link_devices_to_subentries(hass: HomeAssistant, entry: ConfigEntry) ->
                 add_config_subentry_id=subentry.subentry_id,
             )
         for entity_entry in entities:
-            unique_id = entity_entry.unique_id
+            unique_id = getattr(entity_entry, "unique_id", None)
+            if not isinstance(unique_id, str):
+                continue
             if unique_id != mac and not unique_id.startswith(f"{mac}-"):
                 continue
             if entity_entry.config_subentry_id == subentry.subentry_id:
