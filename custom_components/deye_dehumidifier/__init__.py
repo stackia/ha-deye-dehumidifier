@@ -1,9 +1,9 @@
 """The Deye Dehumidifier integration."""
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 import logging
-from typing import override
+from typing import TypeVar, override
 
 from libdeye.client import DeyeClient
 from libdeye.cloud_api import (
@@ -25,8 +25,6 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import ssl
 
@@ -173,12 +171,15 @@ async def async_remove_config_entry_device(
     return not is_known_dehumidifier_identifier(device_entry.identifiers, current_macs)
 
 
+_T = TypeVar("_T")
+
+
 def async_setup_dynamic_entities(
     hass: HomeAssistant,
     config_entry: DeyeConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: Callable[[Iterable[_T]], object],
     entity_factory: Callable[
-        [DeyeDataUpdateCoordinator, DeyeApiResponseDeviceInfo], Sequence[Entity]
+        [DeyeDataUpdateCoordinator, DeyeApiResponseDeviceInfo], Sequence[_T]
     ],
 ) -> None:
     """Add entities now and whenever a new dehumidifier is discovered."""
@@ -189,7 +190,7 @@ def async_setup_dynamic_entities(
     def _async_add_new_devices() -> None:
         current_ids = {device["device_id"] for device in data.device_list}
         known_devices.intersection_update(current_ids)
-        new_entities: list[Entity] = []
+        new_entities: list[_T] = []
         for device in data.device_list:
             device_id = device["device_id"]
             if device_id in known_devices:
