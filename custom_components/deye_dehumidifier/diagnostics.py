@@ -16,7 +16,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from . import DATA_KEY, ConfigEntryData
+from . import ConfigEntryData, DeyeConfigEntry
 from .const import CONF_AUTH_TOKEN, CONF_PASSWORD, CONF_USERNAME, DOMAIN
 from .data_coordinator import DeyeDataUpdateCoordinator
 
@@ -189,9 +189,9 @@ def _device_diagnostics(
     }
 
 
-def _entry_runtime_data(hass: HomeAssistant, entry: ConfigEntry) -> ConfigEntryData:
-    """Read config-entry runtime data the same way as other platforms."""
-    return hass.data[DATA_KEY][entry.entry_id]
+def _entry_runtime_data(entry: DeyeConfigEntry) -> ConfigEntryData:
+    """Read config-entry runtime data from the typed entry."""
+    return entry.runtime_data
 
 
 def _match_device(
@@ -213,10 +213,10 @@ def _match_device(
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, entry: DeyeConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    data = _entry_runtime_data(hass, entry)
+    data = _entry_runtime_data(entry)
     return async_redact_data(
         {
             "entry": {
@@ -240,10 +240,10 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry, device: DeviceEntry
+    hass: HomeAssistant, entry: DeyeConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a single device."""
-    data = _entry_runtime_data(hass, entry)
+    data = _entry_runtime_data(entry)
     matched = _match_device(data.device_list, device)
     if matched is None:
         return {"error": "Device is not part of this config entry"}
