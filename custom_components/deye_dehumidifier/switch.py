@@ -1,16 +1,15 @@
-"""Platform for humidifier integration."""
+"""Platform for dehumidifier switch entities."""
 
-from __future__ import annotations
+from typing import Any, override
 
-from typing import Any
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo
+from libdeye.const import DeyeDeviceMode, get_product_feature_config
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from libdeye.cloud_api import DeyeApiResponseDeviceInfo
-from libdeye.const import DeyeDeviceMode, get_product_feature_config
 
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
@@ -21,7 +20,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Add swiches for passed config_entry in HA."""
+    """Add switches for passed config_entry in HA."""
     data = hass.data[DATA_KEY][config_entry.entry_id]
 
     for device in data.device_list:
@@ -82,15 +81,18 @@ class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
         self.entity_id = f"switch.{self.entity_id_base}_child_lock"
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return True if the child lock is on."""
         return self.coordinator.data.state.child_lock_switch
 
+    @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the child lock on."""
         self.coordinator.data.state.child_lock_switch = True
         await self.publish_command_from_current_state()
 
+    @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the child lock off."""
         self.coordinator.data.state.child_lock_switch = False
@@ -116,15 +118,18 @@ class DeyeAnionSwitch(DeyeEntity, SwitchEntity):
         self.entity_id = f"switch.{self.entity_id_base}_anion"
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return True if the anion switch is on."""
         return self.coordinator.data.state.anion_switch
 
+    @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the anion switch on."""
         self.coordinator.data.state.anion_switch = True
         await self.publish_command_from_current_state()
 
+    @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the anion switch off."""
         self.coordinator.data.state.anion_switch = False
@@ -150,15 +155,18 @@ class DeyeWaterPumpSwitch(DeyeEntity, SwitchEntity):
         self.entity_id = f"switch.{self.entity_id_base}_water_pump"
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return True if the water pump switch is on."""
         return self.coordinator.data.state.water_pump_switch
 
+    @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water pump on."""
         self.coordinator.data.state.water_pump_switch = True
         await self.publish_command_from_current_state()
 
+    @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the water pump off."""
         self.coordinator.data.state.water_pump_switch = False
@@ -186,24 +194,29 @@ class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
         self._min_supported_humidity = min_supported_humidity
 
     @property
+    @override
     def available(self) -> bool:
+        """Return True if continuous mode can be controlled."""
         return (
             super().available
             and self.coordinator.data.state.mode == DeyeDeviceMode.MANUAL_MODE
         )
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return True if the continuous switch is on."""
         return (
             self.coordinator.data.state.target_humidity <= self._min_supported_humidity
         )
 
+    @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the continuous switch on."""
         self.coordinator.data.state.target_humidity = self._min_supported_humidity
         await self.publish_command_from_current_state()
 
+    @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the continuous switch off."""
         self.coordinator.data.state.target_humidity = 50

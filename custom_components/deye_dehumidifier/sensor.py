@@ -1,6 +1,8 @@
-"""Platform for humidifier integration."""
+"""Platform for humidity and temperature sensors."""
 
-from __future__ import annotations
+from typing import override
+
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -11,7 +13,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from libdeye.cloud_api import DeyeApiResponseDeviceInfo
 
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
@@ -60,6 +61,7 @@ class DeyeHumiditySensor(DeyeEntity, SensorEntity):
         self.entity_id = f"sensor.{self.entity_id_base}_humidity"
 
     @property
+    @override
     def native_value(self) -> int:
         """Return current environment humidity."""
         return self.coordinator.data.state.environment_humidity
@@ -85,6 +87,7 @@ class DeyeTemperatureSensor(DeyeEntity, SensorEntity):
         self.entity_id = f"sensor.{self.entity_id_base}_temperature"
 
     @property
+    @override
     def native_value(self) -> int:
         """Return current environment temperature."""
         return self.coordinator.data.state.environment_temperature

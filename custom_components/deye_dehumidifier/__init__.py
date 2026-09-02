@@ -1,21 +1,9 @@
 """The Deye Dehumidifier integration."""
 
-from __future__ import annotations
-
-import logging
 from dataclasses import dataclass
+import logging
+from typing import override
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import ssl
-from homeassistant.util.hass_dict import HassKey
 from libdeye.cloud_api import (
     DeyeApiResponseDeviceInfo,
     DeyeCloudApi,
@@ -29,13 +17,19 @@ from libdeye.mqtt_client import (
     DeyeFogMqttClient,
 )
 
-from .const import (
-    CONF_AUTH_TOKEN,
-    CONF_PASSWORD,
-    CONF_USERNAME,
-    DOMAIN,
-    MANUFACTURER,
-)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.debounce import Debouncer
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import ssl
+from homeassistant.util.hass_dict import HassKey
+
+from .const import CONF_AUTH_TOKEN, CONF_PASSWORD, CONF_USERNAME, DOMAIN, MANUFACTURER
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
@@ -53,6 +47,8 @@ DATA_KEY: HassKey[dict[str, ConfigEntryData]] = HassKey(DOMAIN)
 
 @dataclass
 class ConfigEntryData:
+    """Runtime data stored on a config entry."""
+
     mqtt_clients: list[BaseDeyeMqttClient]
     device_list: list[DeyeApiResponseDeviceInfo]
     coordinator_map: dict[str, DeyeDataUpdateCoordinator]
@@ -152,8 +148,8 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
         coordinator: DeyeDataUpdateCoordinator,
         device: DeyeApiResponseDeviceInfo,
     ) -> None:
-        super().__init__(coordinator)
         """Initialize the instance."""
+        super().__init__(coordinator)
         self._device = device
         self._attr_has_entity_name = True
         self._attr_unique_id = self._device["mac"]
@@ -202,8 +198,8 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
         )
 
     async def publish_command_from_current_state(self) -> None:
-        """
-        Publish commands to the device. The command is generated from the current state.
+        """Publish a command generated from the current desired state.
+
         Should be called after modifying device state.
         """
         self.coordinator.mute_state_update_for_a_while()
@@ -211,5 +207,7 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
         await self._debounced_publish_command.async_call()
 
     @property
+    @override
     def available(self) -> bool:
+        """Return True if the device is available."""
         return self.coordinator.data.available

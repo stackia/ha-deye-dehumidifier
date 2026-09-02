@@ -1,8 +1,10 @@
-"""Platform for humidifier integration."""
+"""Platform for dehumidifier humidifier entities."""
 
-from __future__ import annotations
+from typing import Any, override
 
-from typing import Any
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo
+from libdeye.const import DeyeDeviceMode, get_product_feature_config
+from libdeye.device_state import DeyeDeviceState
 
 from homeassistant.components.humidifier import HumidifierDeviceClass, HumidifierEntity
 from homeassistant.components.humidifier.const import (
@@ -14,9 +16,6 @@ from homeassistant.components.humidifier.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from libdeye.cloud_api import DeyeApiResponseDeviceInfo
-from libdeye.const import DeyeDeviceMode, get_product_feature_config
-from libdeye.device_state import DeyeDeviceState
 
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
@@ -71,52 +70,62 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
 
     @property
     def get_device_state(self) -> DeyeDeviceState:
+        """Return the current desired device state."""
         return self.coordinator.data.state
 
     @property
+    @override
     def target_humidity(self) -> int:
         """Return the humidity we try to reach."""
         return self.coordinator.data.state.target_humidity
 
     @property
+    @override
     def current_humidity(self) -> int:
         """Return the current humidity."""
         return self.coordinator.data.state.environment_humidity
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return True if device is on."""
         return self.coordinator.data.state.power_switch
 
     @property
+    @override
     def mode(self) -> str:
         """Return the working mode."""
         return deye_mode_to_hass_mode(self.coordinator.data.state.mode)
 
     @property
+    @override
     def action(self) -> HumidifierAction:
+        """Return the current humidifier action."""
         if not self.coordinator.data.state.power_switch:
             return HumidifierAction.OFF
-        elif self.coordinator.data.state.fan_running:
+        if self.coordinator.data.state.fan_running:
             return HumidifierAction.DRYING
-        else:
-            return HumidifierAction.IDLE
+        return HumidifierAction.IDLE
 
+    @override
     async def async_set_mode(self, mode: str) -> None:
         """Set new working mode."""
         self.coordinator.data.state.mode = hass_mode_to_deye_mode(mode)
         await self.publish_command_from_current_state()
 
+    @override
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
         self.coordinator.data.state.target_humidity = humidity
         await self.publish_command_from_current_state()
 
+    @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the device on."""
         self.coordinator.data.state.power_switch = True
         await self.publish_command_from_current_state()
 
+    @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
         self.coordinator.data.state.power_switch = False

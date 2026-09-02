@@ -1,7 +1,8 @@
 # Contributing
 
-This repository uses [uv](https://docs.astral.sh/uv/) for Python versions,
-a project virtual environment, and locked dependencies.
+This repository uses [uv](https://docs.astral.sh/uv/) plus the same
+Python 3.14 / Ruff / MyPy / Pylint toolchain as
+[Home Assistant core](https://github.com/home-assistant/core).
 
 ## Local development with Home Assistant core
 
@@ -35,7 +36,9 @@ From the integration repository root:
 # Install uv: https://docs.astral.sh/uv/getting-started/installation/
 uv sync
 uv run pre-commit install
+uv run pre-commit run --all-files
 uv run mypy .
+uv run pylint custom_components scripts
 uv run python scripts/check_versions.py
 ```
 

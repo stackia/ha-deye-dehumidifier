@@ -3,7 +3,6 @@
 *.py[cod]
 *.so
 *.cfg
-!.flake8
 *.orig
 *.log
 *.pot
@@ -13,6 +12,8 @@ __pycache__/*
 */.ipynb_checkpoints/*
 .DS_Store
 .mypy_cache/
+.ruff_cache/
+.pylint.d/
 
 # Project files
 .ropeproject

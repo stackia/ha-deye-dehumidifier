@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """Script to check version consistency across project files."""
 
-from __future__ import annotations
-
 import json
+from pathlib import Path
 import re
 import sys
 import tomllib
-from pathlib import Path
 from typing import Any
 
 
@@ -40,9 +38,19 @@ def get_requires_python(pyproject: dict[str, Any]) -> str | None:
     return match.group(1) if match else None
 
 
+def normalize_python_version(version: str | None) -> str | None:
+    """Normalize a Python version to major.minor for cross-file comparison."""
+    if version is None:
+        return None
+    parts = version.split(".")
+    if len(parts) >= 2:
+        return f"{parts[0]}.{parts[1]}"
+    return version
+
+
 def get_json_field(path: str, field: str) -> str | None:
     """Get a string field from a JSON file."""
-    with Path(path).open() as f:
+    with Path(path).open(encoding="utf-8") as f:
         data = json.load(f)
     value = data.get(field)
     return value if isinstance(value, str) else None
@@ -50,7 +58,9 @@ def get_json_field(path: str, field: str) -> str | None:
 
 def get_libdeye_version_from_manifest() -> str | None:
     """Get libdeye version from manifest.json."""
-    with Path("custom_components/deye_dehumidifier/manifest.json").open() as f:
+    with Path("custom_components/deye_dehumidifier/manifest.json").open(
+        encoding="utf-8"
+    ) as f:
         data = json.load(f)
     for req in data.get("requirements", []):
         if isinstance(req, str) and req.startswith("libdeye=="):
@@ -60,7 +70,7 @@ def get_libdeye_version_from_manifest() -> str | None:
 
 def get_python_version_from_precommit() -> str | None:
     """Get Python version from .pre-commit-config.yaml."""
-    content = Path(".pre-commit-config.yaml").read_text()
+    content = Path(".pre-commit-config.yaml").read_text(encoding="utf-8")
     match = re.search(r"python: python([0-9.]+)", content)
     return match.group(1) if match else None
 
@@ -70,7 +80,7 @@ def get_python_version_file() -> str | None:
     path = Path(".python-version")
     if not path.exists():
         return None
-    return path.read_text().strip() or None
+    return path.read_text(encoding="utf-8").strip() or None
 
 
 def main() -> None:
@@ -105,12 +115,16 @@ def main() -> None:
         )
 
     python_versions: dict[str, str | None] = {
-        ".pre-commit-config.yaml": get_python_version_from_precommit(),
-        "pyproject.toml [tool.mypy]": pyproject.get("tool", {})
-        .get("mypy", {})
-        .get("python_version"),
-        ".python-version": get_python_version_file(),
-        "pyproject.toml requires-python": get_requires_python(pyproject),
+        ".pre-commit-config.yaml": normalize_python_version(
+            get_python_version_from_precommit()
+        ),
+        "pyproject.toml [tool.mypy]": normalize_python_version(
+            pyproject.get("tool", {}).get("mypy", {}).get("python_version")
+        ),
+        ".python-version": normalize_python_version(get_python_version_file()),
+        "pyproject.toml requires-python": normalize_python_version(
+            get_requires_python(pyproject)
+        ),
     }
 
     reference_file = None

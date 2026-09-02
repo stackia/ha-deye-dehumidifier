@@ -1,8 +1,9 @@
-"""Platform for humidifier integration."""
+"""Platform for dehumidifier fan entities."""
 
-from __future__ import annotations
+from typing import Any, override
 
-from typing import Any
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo
+from libdeye.const import DeyeFanSpeed, get_product_feature_config
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -12,8 +13,6 @@ from homeassistant.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
-from libdeye.cloud_api import DeyeApiResponseDeviceInfo
-from libdeye.const import DeyeFanSpeed, get_product_feature_config
 
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
@@ -66,16 +65,19 @@ class DeyeFan(DeyeEntity, FanEntity):
         self._attr_speed_count = len(self._named_fan_speeds)
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return true if the entity is on."""
         return self.coordinator.data.state.power_switch
 
     @property
+    @override
     def oscillating(self) -> bool:
         """Return whether or not the fan is currently oscillating."""
         return self.coordinator.data.state.oscillating_switch
 
     @property
+    @override
     def percentage(self) -> int:
         """Return the current speed as a percentage."""
         try:
@@ -85,11 +87,13 @@ class DeyeFan(DeyeEntity, FanEntity):
         except ValueError:
             return 0
 
+    @override
     async def async_oscillate(self, oscillating: bool) -> None:
         """Oscillate the fan."""
         self.coordinator.data.state.oscillating_switch = oscillating
         await self.publish_command_from_current_state()
 
+    @override
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
         if percentage == 0:
@@ -100,6 +104,7 @@ class DeyeFan(DeyeEntity, FanEntity):
         self.coordinator.data.state.fan_speed = fan_speed
         await self.publish_command_from_current_state()
 
+    @override
     async def async_turn_on(
         self,
         percentage: int | None = None,
@@ -115,6 +120,7 @@ class DeyeFan(DeyeEntity, FanEntity):
             self.coordinator.data.state.fan_speed = fan_speed
         await self.publish_command_from_current_state()
 
+    @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         self.coordinator.data.state.power_switch = False
