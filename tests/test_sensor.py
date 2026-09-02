@@ -2,12 +2,11 @@
 
 from libdeye.device_state import DeyeDeviceState
 
-from homeassistant.core import HomeAssistant
-
 from custom_components.deye_dehumidifier.sensor import (
     DeyeHumiditySensor,
     DeyeTemperatureSensor,
 )
+from homeassistant.core import HomeAssistant
 from tests.helpers import MOCK_DEVICE_INFO, make_coordinator
 
 

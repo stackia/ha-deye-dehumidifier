@@ -4,11 +4,10 @@ from unittest.mock import MagicMock
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-
 from custom_components.deye_dehumidifier import DATA_KEY
 from custom_components.deye_dehumidifier.const import DOMAIN
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.core import HomeAssistant
 from tests.helpers import MOCK_CONFIG, MOCK_DEVICE_INFO, FakeDeyeDevice
 
 
@@ -23,7 +22,7 @@ async def test_setup_and_unload_entry(
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    assert entry.state is ConfigEntryState.LOADED
+    assert entry.state == ConfigEntryState.LOADED
     data = hass.data[DATA_KEY][entry.entry_id]
     assert data.client is client
     assert data.device_list == [MOCK_DEVICE_INFO]
@@ -34,6 +33,6 @@ async def test_setup_and_unload_entry(
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
 
-    assert entry.state is ConfigEntryState.NOT_LOADED
+    assert entry.state == ConfigEntryState.NOT_LOADED
     assert entry.entry_id not in hass.data[DATA_KEY]
     client.disconnect.assert_called_once()

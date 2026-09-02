@@ -3,13 +3,9 @@
 from libdeye.const import DeyeDeviceMode
 from libdeye.device_state import DeyeDeviceState
 
+from custom_components.deye_dehumidifier.humidifier import MODE_MANUAL, DeyeDehumidifier
 from homeassistant.components.humidifier import HumidifierAction
 from homeassistant.core import HomeAssistant
-
-from custom_components.deye_dehumidifier.humidifier import (
-    MODE_MANUAL,
-    DeyeDehumidifier,
-)
 from tests.helpers import MOCK_DEVICE_INFO, make_coordinator
 
 

@@ -82,7 +82,9 @@ class FakeDeyeDevice:
         return self._unsub
 
 
-def make_coordinator(hass: Any, state: DeyeDeviceState, *, available: bool = True) -> MagicMock:
+def make_coordinator(
+    hass: Any, state: DeyeDeviceState, *, available: bool = True
+) -> MagicMock:
     """Build a coordinator mock that entities can read without a live client."""
     coordinator = MagicMock()
     coordinator.hass = hass

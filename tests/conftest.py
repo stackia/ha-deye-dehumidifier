@@ -6,21 +6,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from libdeye.device_state import DeyeDeviceState
 import pytest
 
-from tests.helpers import (
-    DEFAULT_STATE_HEX,
-    MOCK_DEVICE_INFO,
-    FakeDeyeDevice,
-)
+from tests.helpers import DEFAULT_STATE_HEX, MOCK_DEVICE_INFO, FakeDeyeDevice
 
 pytest_plugins = "pytest_homeassistant_custom_component"
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(
-    enable_custom_integrations: None,
-) -> Generator[None]:
+def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
     """Enable loading this repo's custom_components in every test."""
-    yield
+    _ = enable_custom_integrations
 
 
 @pytest.fixture
