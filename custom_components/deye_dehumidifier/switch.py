@@ -26,9 +26,9 @@ class _FlagSwitchSpec(NamedTuple):
     ) = None
 
 
-# Child lock is always created. The rest follow product JSON gates, including
-# Fog extras (uv / prompt_sound / screen_display). Continuous dehumidify is
-# not a device flag and stays on DeyeContinuousSwitch.
+# Child lock is always created. The rest follow product JSON gates, the
+# same as anion (including uv / prompt_sound / screen_display). Continuous
+# dehumidify is not a device flag and stays on DeyeContinuousSwitch.
 _ALWAYS_ON_FLAG_SWITCHES = (
     _FlagSwitchSpec("child_lock", "child-lock", "child_lock_switch"),
 )
@@ -84,10 +84,10 @@ async def async_setup_entry(
 
 
 class DeyeConfigSwitch(DeyeEntity, SwitchEntity):
-    """Boolean configuration switch (child lock, anion, extras, …).
+    """Boolean configuration switch (child lock, anion, UV, …).
 
-    Product JSON only gates whether the entity is created. Fog extras stay
-    ``None`` until GET reports them or the user toggles the switch.
+    Product JSON only gates whether the entity is created. State and
+    command fields are first-class bools, the same as child lock.
     """
 
     _attr_device_class = SwitchDeviceClass.SWITCH
@@ -111,12 +111,9 @@ class DeyeConfigSwitch(DeyeEntity, SwitchEntity):
 
     @property
     @override
-    def is_on(self) -> bool | None:
-        """Return True/False, or unknown when the device has not reported the flag."""
-        value = getattr(self.coordinator.data.state, self._state_attr)
-        if isinstance(value, bool):
-            return value
-        return None
+    def is_on(self) -> bool:
+        """Return True if the switch is on."""
+        return bool(getattr(self.coordinator.data.state, self._state_attr))
 
     @override
     async def async_turn_on(self, **kwargs: Any) -> None:
