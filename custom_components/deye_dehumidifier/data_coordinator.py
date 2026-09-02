@@ -4,10 +4,8 @@ from datetime import datetime, timedelta
 import logging
 from typing import NamedTuple, override
 
-from libdeye.cloud_api import DeyeApiResponseDeviceInfo, DeyeCloudApi
-from libdeye.const import QUERY_DEVICE_STATE_COMMAND_CLASSIC
+from libdeye.client import DeyeDevice
 from libdeye.device_state import DeyeDeviceState
-from libdeye.mqtt_client import BaseDeyeMqttClient, DeyeClassicMqttClient
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
@@ -32,46 +30,34 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         self,
         hass: HomeAssistant,
         config_entry: ConfigEntry,
-        device: DeyeApiResponseDeviceInfo,
-        mqtt_client: BaseDeyeMqttClient,
-        cloud_api: DeyeCloudApi,
+        device: DeyeDevice,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
             hass,
             _LOGGER,
             config_entry=config_entry,
-            name=f"{device['device_name']} ({device['device_id']})",
+            name=f"{device.name} ({device.device_id})",
             update_method=self.poll_device_state,
             update_interval=timedelta(seconds=30),
             always_update=False,
         )
-        self.mqtt_client = mqtt_client
-        self._cloud_api = cloud_api
+        self.device = device
         self.state_update_muted: CALLBACK_TYPE | None = None
-        self._device = device
 
     @override
     async def _async_setup(self) -> None:
         """Set up the coordinator."""
-        reported_state = DeyeDeviceState(
-            self._device["payload"]
-            or "1411000000370000000000000000003C3C0000000000"  # 20°C/60%RH as the default state
-        )
+        await self.device.ensure_connected()
+        reported_state = self.device.reported_state
         self.data = DeyeDeviceData(
             reported_state=reported_state,
             state=reported_state.copy(),
-            available=self._device["online"],
+            available=self.device.available,
         )
-        self.mqtt_client.subscribe_state_change(
-            self._device["product_id"],
-            self._device["device_id"],
-            self.update_device_state,
-        )
-        self.mqtt_client.subscribe_availability_change(
-            self._device["product_id"],
-            self._device["device_id"],
-            self.update_device_availability,
+        self.device.subscribe(
+            on_state=self.update_device_state,
+            on_availability=self.update_device_availability,
         )
 
     def mute_state_update_for_a_while(self) -> None:
@@ -120,18 +106,9 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         if self.state_update_muted:
             return self.data
 
-        if isinstance(self.mqtt_client, DeyeClassicMqttClient):
-            await self.mqtt_client.publish_command(
-                self._device["product_id"],
-                self._device["device_id"],
-                QUERY_DEVICE_STATE_COMMAND_CLASSIC,
-            )
+        reported_state = await self.device.request_refresh()
+        if reported_state is None:
             return self.data
-
-        reported_state = await self.mqtt_client.query_device_state(
-            self._device["product_id"],
-            self._device["device_id"],
-        )
         return DeyeDeviceData(
             reported_state=reported_state,
             state=reported_state.copy(),

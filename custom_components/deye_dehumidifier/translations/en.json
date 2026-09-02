@@ -35,7 +35,11 @@
             "state": {
               "manual": "Manual",
               "air_purifier": "Air Purifier",
-              "clothes_dryer": "Clothes Dryer"
+              "clothes_dryer": "Clothes Dryer",
+              "turbo": "Strong",
+              "manual_purifier": "Manual Purifier",
+              "sleep_purifier": "Sleep Purifier",
+              "auto_purifier": "Auto Purifier"
             }
           }
         }

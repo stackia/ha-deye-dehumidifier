@@ -35,7 +35,11 @@
             "state": {
               "manual": "Thủ công",
               "air_purifier": "Làm sạch không khí",
-              "clothes_dryer": "Sấy quần áo"
+              "clothes_dryer": "Sấy quần áo",
+              "turbo": "Mạnh",
+              "manual_purifier": "Lọc thủ công",
+              "sleep_purifier": "Lọc khi ngủ",
+              "auto_purifier": "Lọc tự động"
             }
           }
         }

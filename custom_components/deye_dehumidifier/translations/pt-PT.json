@@ -35,7 +35,11 @@
             "state": {
               "manual": "Manual",
               "air_purifier": "Purificador de ar",
-              "clothes_dryer": "Secador de roupas"
+              "clothes_dryer": "Secador de roupas",
+              "turbo": "Forte",
+              "manual_purifier": "Purificador manual",
+              "sleep_purifier": "Purificador noturno",
+              "auto_purifier": "Purificador automático"
             }
           }
         }

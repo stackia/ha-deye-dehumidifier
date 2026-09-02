@@ -35,7 +35,11 @@
             "state": {
               "manual": "手動",
               "air_purifier": "淨化",
-              "clothes_dryer": "乾衣"
+              "clothes_dryer": "乾衣",
+              "turbo": "急速",
+              "manual_purifier": "手動淨化",
+              "sleep_purifier": "睡眠淨化",
+              "auto_purifier": "自動淨化"
             }
           }
         }
