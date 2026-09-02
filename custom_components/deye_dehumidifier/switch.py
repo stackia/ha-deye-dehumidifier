@@ -10,7 +10,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DeyeConfigEntry, DeyeEntity
+from . import DeyeConfigEntry, DeyeEntity, async_setup_dynamic_entities
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 
@@ -56,35 +56,36 @@ def _feature_flag_enabled(
     return bool(feature_config[spec.feature_key])
 
 
+def _switch_entities(
+    coordinator: DeyeDataUpdateCoordinator, device: DeyeApiResponseDeviceInfo
+) -> list[SwitchEntity]:
+    """Return the switch entities advertised by this product."""
+    feature_config = get_product_feature_config(device["product_id"])
+    entities: list[SwitchEntity] = [
+        DeyeConfigSwitch(coordinator, device, spec) for spec in _ALWAYS_ON_FLAG_SWITCHES
+    ]
+    entities.append(
+        DeyeContinuousSwitch(
+            coordinator,
+            device,
+            feature_config["min_target_humidity"],
+        )
+    )
+    entities.extend(
+        DeyeConfigSwitch(coordinator, device, spec)
+        for spec in _FEATURE_FLAG_SWITCHES
+        if _feature_flag_enabled(feature_config, spec)
+    )
+    return entities
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: DeyeConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add switches for this config entry."""
-    data = entry.runtime_data
-
-    entities: list[SwitchEntity] = []
-    for device in data.device_list:
-        feature_config = get_product_feature_config(device["product_id"])
-        coordinator = data.coordinator_map[device["device_id"]]
-        entities.extend(
-            DeyeConfigSwitch(coordinator, device, spec)
-            for spec in _ALWAYS_ON_FLAG_SWITCHES
-        )
-        entities.append(
-            DeyeContinuousSwitch(
-                coordinator,
-                device,
-                feature_config["min_target_humidity"],
-            )
-        )
-        entities.extend(
-            DeyeConfigSwitch(coordinator, device, spec)
-            for spec in _FEATURE_FLAG_SWITCHES
-            if _feature_flag_enabled(feature_config, spec)
-        )
-    async_add_entities(entities)
+    async_setup_dynamic_entities(hass, entry, async_add_entities, _switch_entities)
 
 
 class DeyeConfigSwitch(DeyeEntity, SwitchEntity):

@@ -13,7 +13,7 @@ from homeassistant.util.percentage import (
     percentage_to_ordered_list_item,
 )
 
-from . import DeyeConfigEntry, DeyeEntity
+from . import DeyeConfigEntry, DeyeEntity, async_setup_dynamic_entities
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 # Coordinator is used to centralize the data updates
@@ -50,23 +50,22 @@ def preset_mode_to_deye_fan_speed(preset_mode: str) -> DeyeFanSpeed:
     return _PRESET_TO_DEYE_FAN_SPEED[preset_mode]
 
 
+def _fan_entities(
+    coordinator: DeyeDataUpdateCoordinator, device: DeyeApiResponseDeviceInfo
+) -> list[DeyeFan]:
+    """Return the fan entity when the product supports fan speeds."""
+    if not get_product_feature_config(device["product_id"])["fan_speed"]:
+        return []
+    return [DeyeFan(coordinator, device)]
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: DeyeConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add fans for this config entry."""
-    data = entry.runtime_data
-    async_add_entities(
-        [
-            DeyeFan(
-                data.coordinator_map[device["device_id"]],
-                device,
-            )
-            for device in data.device_list
-            if len(get_product_feature_config(device["product_id"])["fan_speed"]) > 0
-        ]
-    )
+    async_setup_dynamic_entities(hass, entry, async_add_entities, _fan_entities)
 
 
 class DeyeFan(DeyeEntity, FanEntity):

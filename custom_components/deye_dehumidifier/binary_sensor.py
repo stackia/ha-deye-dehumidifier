@@ -12,7 +12,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DeyeConfigEntry, DeyeEntity
+from . import DeyeConfigEntry, DeyeEntity, async_setup_dynamic_entities
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 # Coordinator is used to centralize the data updates
@@ -25,22 +25,14 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add binary sensors for this config entry."""
-    data = entry.runtime_data
-    async_add_entities(
-        [
-            sensor
-            for device in data.device_list
-            for sensor in (
-                DeyeWaterTankBinarySensor(
-                    data.coordinator_map[device["device_id"]],
-                    device,
-                ),
-                DeyeDefrostingBinarySensor(
-                    data.coordinator_map[device["device_id"]],
-                    device,
-                ),
-            )
-        ]
+    async_setup_dynamic_entities(
+        hass,
+        entry,
+        async_add_entities,
+        lambda coordinator, device: [
+            DeyeWaterTankBinarySensor(coordinator, device),
+            DeyeDefrostingBinarySensor(coordinator, device),
+        ],
     )
 
 

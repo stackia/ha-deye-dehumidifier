@@ -1,8 +1,9 @@
 """The Deye Dehumidifier integration."""
 
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 import logging
-from typing import override
+from typing import TypeVar, override
 
 from libdeye.client import DeyeClient
 from libdeye.cloud_api import (
@@ -14,20 +15,28 @@ from libdeye.cloud_api import (
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
     HomeAssistantError,
 )
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import ssl
 
-from .const import CONF_AUTH_TOKEN, CONF_PASSWORD, CONF_USERNAME, DOMAIN, MANUFACTURER
-from .data_coordinator import DeyeDataUpdateCoordinator
+from .const import (
+    CONF_AUTH_TOKEN,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    DOMAIN,
+    MANUFACTURER,
+    is_known_dehumidifier_identifier,
+)
+from .data_coordinator import DeyeDataUpdateCoordinator, DeyeDeviceListCoordinator
 from .issues import (
     MqttDisconnectMonitor,
     async_delete_entry_issues,
@@ -43,8 +52,6 @@ PLATFORMS: list[Platform] = [
 ]
 
 _LOGGER = logging.getLogger(__name__)
-
-_DEHUMIDIFIER_PRODUCT_TYPES = {"dehumidifier", "除湿机", "其他"}
 
 
 def _wrap_command_exception(err: Exception) -> HomeAssistantError:
@@ -73,6 +80,7 @@ class ConfigEntryData:
     client: DeyeClient
     device_list: list[DeyeApiResponseDeviceInfo]
     coordinator_map: dict[str, DeyeDataUpdateCoordinator]
+    device_list_coordinator: DeyeDeviceListCoordinator
     mqtt_monitor: MqttDisconnectMonitor | None = None
 
 
@@ -87,44 +95,50 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool
             entry, data=entry.data | {CONF_AUTH_TOKEN: auth_token}
         )
 
+    cloud_api = DeyeCloudApi(
+        async_get_clientsession(hass),
+        entry.data[CONF_USERNAME],
+        entry.data[CONF_PASSWORD],
+        entry.data[CONF_AUTH_TOKEN],
+    )
+    cloud_api.on_auth_token_refreshed = on_auth_token_refreshed
+    client = DeyeClient(cloud_api, ssl.get_default_context())
+    coordinator_map: dict[str, DeyeDataUpdateCoordinator] = {}
+    device_list: list[DeyeApiResponseDeviceInfo] = []
+    device_list_coordinator = DeyeDeviceListCoordinator(
+        hass, entry, client, coordinator_map, device_list
+    )
+
     try:
-        cloud_api = DeyeCloudApi(
-            async_get_clientsession(hass),
-            entry.data[CONF_USERNAME],
-            entry.data[CONF_PASSWORD],
-            entry.data[CONF_AUTH_TOKEN],
-        )
-        cloud_api.on_auth_token_refreshed = on_auth_token_refreshed
-        client = DeyeClient(cloud_api, ssl.get_default_context())
+        await device_list_coordinator.async_config_entry_first_refresh()
+    except ConfigEntryAuthFailed, ConfigEntryNotReady:
+        await device_list_coordinator.async_shutdown()
+        for coordinator in list(coordinator_map.values()):
+            await coordinator.async_shutdown()
+        client.disconnect()
+        raise
 
-        devices = [
-            device
-            for device in await client.list_devices()
-            if device.info["product_type"] in _DEHUMIDIFIER_PRODUCT_TYPES
-        ]
-
-        coordinator_map: dict[str, DeyeDataUpdateCoordinator] = {}
-        for device in devices:
-            coordinator = DeyeDataUpdateCoordinator(hass, entry, device)
-            await coordinator.async_config_entry_first_refresh()
-            coordinator_map[device.device_id] = coordinator
-
-    except DeyeCloudApiInvalidAuthError as err:
-        raise ConfigEntryAuthFailed from err
-    except DeyeCloudApiCannotConnectError as err:
-        raise ConfigEntryNotReady from err
-
-    device_infos = [device.info for device in devices]
     mqtt_monitor = MqttDisconnectMonitor(hass, entry.entry_id, client)
     entry.runtime_data = ConfigEntryData(
         client=client,
-        device_list=device_infos,
+        device_list=device_list,
         coordinator_map=coordinator_map,
+        device_list_coordinator=device_list_coordinator,
         mqtt_monitor=mqtt_monitor,
     )
 
-    async_sync_unknown_product_issues(hass, entry.entry_id, device_infos)
+    async_sync_unknown_product_issues(hass, entry.entry_id, device_list)
     mqtt_monitor.async_start()
+
+    @callback
+    def _async_sync_issues() -> None:
+        async_sync_unknown_product_issues(
+            hass, entry.entry_id, entry.runtime_data.device_list
+        )
+
+    entry.async_on_unload(
+        device_list_coordinator.async_add_listener(_async_sync_issues)
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -138,11 +152,61 @@ async def async_unload_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> boo
         if data.mqtt_monitor is not None:
             data.mqtt_monitor.async_stop()
         async_delete_entry_issues(hass, entry.entry_id)
+        await data.device_list_coordinator.async_shutdown()
         for coordinator in data.coordinator_map.values():
-            coordinator.unsubscribe()
+            await coordinator.async_shutdown()
         data.client.disconnect()
 
     return unload_ok
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: DeyeConfigEntry, device_entry: dr.DeviceEntry
+) -> bool:
+    """Allow deleting a device that is no longer on the Deye account."""
+    data = getattr(entry, "runtime_data", None)
+    if data is None:
+        return True
+    current_macs = {device["mac"] for device in data.device_list}
+    return not is_known_dehumidifier_identifier(device_entry.identifiers, current_macs)
+
+
+_T = TypeVar("_T")
+
+
+def async_setup_dynamic_entities(
+    hass: HomeAssistant,
+    config_entry: DeyeConfigEntry,
+    async_add_entities: Callable[[Iterable[_T]], object],
+    entity_factory: Callable[
+        [DeyeDataUpdateCoordinator, DeyeApiResponseDeviceInfo], Sequence[_T]
+    ],
+) -> None:
+    """Add entities now and whenever a new dehumidifier is discovered."""
+    data = config_entry.runtime_data
+    known_devices: set[str] = set()
+
+    @callback
+    def _async_add_new_devices() -> None:
+        current_ids = {device["device_id"] for device in data.device_list}
+        known_devices.intersection_update(current_ids)
+        new_entities: list[_T] = []
+        for device in data.device_list:
+            device_id = device["device_id"]
+            if device_id in known_devices:
+                continue
+            coordinator = data.coordinator_map.get(device_id)
+            if coordinator is None:
+                continue
+            known_devices.add(device_id)
+            new_entities.extend(entity_factory(coordinator, device))
+        if new_entities:
+            async_add_entities(new_entities)
+
+    _async_add_new_devices()
+    config_entry.async_on_unload(
+        data.device_list_coordinator.async_add_listener(_async_add_new_devices)
+    )
 
 
 def deye_device_configuration_url(
