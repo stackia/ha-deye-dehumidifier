@@ -11,11 +11,7 @@ from libdeye.cloud_api import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow as ConfigFlowBase,
-    ConfigFlowResult,
-)
+from homeassistant.config_entries import ConfigFlow as ConfigFlowBase, ConfigFlowResult
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -68,8 +64,6 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
 
     VERSION = 1
 
-    _reauth_entry: ConfigEntry | None
-
     @override
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -99,17 +93,14 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
         self, user_input: Mapping[str, Any]
     ) -> ConfigFlowResult:
         """Perform reauth upon an API authentication error."""
-        self._reauth_entry = self.hass.config_entries.async_get_entry(
-            self.context["entry_id"]
-        )
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Dialog that informs the user that reauth is required."""
-        assert self._reauth_entry
-        username = self._reauth_entry.data[CONF_USERNAME]
+        reauth_entry = self._get_reauth_entry()
+        username = reauth_entry.data[CONF_USERNAME]
         if user_input is None:
             return self.async_show_form(
                 step_id="reauth_confirm",
@@ -128,9 +119,42 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
                 description_placeholders={"username": username},
             )
 
-        self.hass.config_entries.async_update_entry(
-            self._reauth_entry,
-            data=result["data"],
+        return self.async_update_reload_and_abort(
+            reauth_entry,
+            data_updates={
+                CONF_PASSWORD: result["data"][CONF_PASSWORD],
+                CONF_AUTH_TOKEN: result["data"][CONF_AUTH_TOKEN],
+            },
         )
-        await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
-        return self.async_abort(reason="reauth_successful")
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle a reconfiguration flow initialized by the user."""
+        reconfigure_entry = self._get_reconfigure_entry()
+        username = reconfigure_entry.data[CONF_USERNAME]
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=STEP_REAUTH_DATA_SCHEMA,
+                description_placeholders={"username": username},
+            )
+        user_input[CONF_USERNAME] = username
+        result = await validate_input(self.hass, user_input)
+        if "errors" in result:
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=self.add_suggested_values_to_schema(
+                    STEP_REAUTH_DATA_SCHEMA, user_input
+                ),
+                errors=result["errors"],
+                description_placeholders={"username": username},
+            )
+
+        return self.async_update_reload_and_abort(
+            reconfigure_entry,
+            data_updates={
+                CONF_PASSWORD: result["data"][CONF_PASSWORD],
+                CONF_AUTH_TOKEN: result["data"][CONF_AUTH_TOKEN],
+            },
+        )

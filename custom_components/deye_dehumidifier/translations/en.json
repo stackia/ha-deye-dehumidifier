@@ -3,7 +3,8 @@
   "config": {
     "abort": {
       "already_configured_account": "Account is already configured",
-      "reauth_successful": "Re-authentication was successful"
+      "reauth_successful": "Re-authentication was successful",
+      "reconfigure_successful": "Re-configuration was successful"
     },
     "error": {
       "cannot_connect": "Failed to connect",
@@ -14,6 +15,13 @@
       "reauth_confirm": {
         "title": "Reauthenticate Integration",
         "description": "Please reenter the password for: {username}",
+        "data": {
+          "password": "Password"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Integration",
+        "description": "Please enter the new password for: {username}",
         "data": {
           "password": "Password"
         }

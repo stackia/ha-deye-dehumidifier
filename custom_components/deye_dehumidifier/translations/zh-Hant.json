@@ -3,7 +3,8 @@
   "config": {
     "abort": {
       "already_configured_account": "帳號已經設定完成",
-      "reauth_successful": "重新認證成功"
+      "reauth_successful": "重新認證成功",
+      "reconfigure_successful": "重新設定成功"
     },
     "error": {
       "cannot_connect": "連線失敗",
@@ -14,6 +15,13 @@
       "reauth_confirm": {
         "title": "重新認證整合",
         "description": "請重新輸入帳號 {username} 的密碼",
+        "data": {
+          "password": "密碼"
+        }
+      },
+      "reconfigure": {
+        "title": "重新設定整合",
+        "description": "請輸入帳號 {username} 的新密碼",
         "data": {
           "password": "密碼"
         }

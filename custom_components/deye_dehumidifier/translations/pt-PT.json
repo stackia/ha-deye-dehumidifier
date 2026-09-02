@@ -3,7 +3,8 @@
   "config": {
     "abort": {
       "already_configured_account": "Conta já configurada",
-      "reauth_successful": "A reautenticação bem efetuada"
+      "reauth_successful": "A reautenticação bem efetuada",
+      "reconfigure_successful": "A reconfiguração foi efetuada com sucesso"
     },
     "error": {
       "cannot_connect": "Falha na ligação",
@@ -14,6 +15,13 @@
       "reauth_confirm": {
         "title": "Reutanticação na integração",
         "description": "Inserir a senha para o utilizador: {username}",
+        "data": {
+          "password": "Senha"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigurar integração",
+        "description": "Inserir a nova senha para o utilizador: {username}",
         "data": {
           "password": "Senha"
         }
