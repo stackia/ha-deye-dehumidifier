@@ -125,11 +125,20 @@ class DeyeFan(DeyeEntity, FanEntity):
         except ValueError:
             return 0
 
+    def _preset_to_supported_speed(self, preset_mode: str) -> DeyeFanSpeed:
+        """Map a preset to a fan speed advertised by this model."""
+        if preset_mode not in (self._attr_preset_modes or []):
+            raise ValueError(f"Unsupported preset mode: {preset_mode}")
+        return preset_mode_to_deye_fan_speed(preset_mode)
+
     @property
     @override
     def preset_mode(self) -> str | None:
         """Return the current named fan speed preset."""
-        return deye_fan_speed_to_preset_mode(self.coordinator.data.state.fan_speed)
+        preset = deye_fan_speed_to_preset_mode(self.coordinator.data.state.fan_speed)
+        if preset is None or preset not in (self._attr_preset_modes or []):
+            return None
+        return preset
 
     @override
     async def async_oscillate(self, oscillating: bool) -> None:
@@ -142,6 +151,7 @@ class DeyeFan(DeyeEntity, FanEntity):
         """Set the speed of the fan, as a percentage."""
         if percentage == 0:
             await self.async_turn_off()
+            return
         fan_speed = DeyeFanSpeed(
             percentage_to_ordered_list_item(self._named_fan_speeds, percentage)
         )
@@ -151,7 +161,7 @@ class DeyeFan(DeyeEntity, FanEntity):
     @override
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set the fan speed from a named preset."""
-        self.coordinator.data.state.fan_speed = preset_mode_to_deye_fan_speed(
+        self.coordinator.data.state.fan_speed = self._preset_to_supported_speed(
             preset_mode
         )
         await self.publish_command_from_current_state()
@@ -166,7 +176,7 @@ class DeyeFan(DeyeEntity, FanEntity):
         """Turn on the fan."""
         self.coordinator.data.state.power_switch = True
         if preset_mode is not None:
-            self.coordinator.data.state.fan_speed = preset_mode_to_deye_fan_speed(
+            self.coordinator.data.state.fan_speed = self._preset_to_supported_speed(
                 preset_mode
             )
         elif percentage is not None:
