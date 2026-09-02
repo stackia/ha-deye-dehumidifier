@@ -12,7 +12,6 @@ from libdeye.cloud_api import (
 from libdeye.device_state import DeyeDeviceState
 
 from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 
