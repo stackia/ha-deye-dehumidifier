@@ -1,6 +1,8 @@
-"""Platform for humidifier integration."""
+"""Platform for dehumidifier binary sensors."""
 
-from __future__ import annotations
+from typing import override
+
+from libdeye.cloud_api import DeyeApiResponseDeviceInfo
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -10,7 +12,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from libdeye.cloud_api import DeyeApiResponseDeviceInfo
 
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
@@ -57,6 +58,7 @@ class DeyeWaterTankBinarySensor(DeyeEntity, BinarySensorEntity):
         self.entity_id = f"binary_sensor.{self.entity_id_base}_water_tank"
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return true if the water tank is full."""
         return self.coordinator.data.state.water_tank_full
@@ -81,6 +83,7 @@ class DeyeDefrostingBinarySensor(DeyeEntity, BinarySensorEntity):
         self.entity_id = f"binary_sensor.{self.entity_id_base}_defrosting"
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return true if the device is defrosting."""
         return self.coordinator.data.state.defrosting
