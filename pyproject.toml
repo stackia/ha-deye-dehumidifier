@@ -37,18 +37,31 @@ dev = [
     # Latest stable Home Assistant Core release.
     "homeassistant==2026.8.3",
 ]
+test = [
+    # Generated against Home Assistant 2026.8.3 (same pin as the dev group).
+    "pytest-homeassistant-custom-component==0.13.357",
+]
 
 [tool.uv]
 package = false
-default-groups = ["dev"]
+default-groups = ["dev", "test"]
+# The HA test plugin may pull a different pylint-per-file-ignores than the
+# version pinned in the dev group; keep the lint pin.
+override-dependencies = ["pylint-per-file-ignores==3.2.1"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+norecursedirs = ["dist", "build", ".venv"]
 
 [tool.mypy]
 python_version = "3.14"
 platform = "linux"
 show_error_codes = true
 follow_imports = "normal"
-# custom_components/ has no __init__.py; without this, mypy maps the
-# integration as both deye_dehumidifier and custom_components.deye_dehumidifier.
+# Keep mypy from mapping the integration twice when tests import
+# custom_components.deye_dehumidifier.
 explicit_package_bases = true
 native_parser = true
 local_partial_types = true
@@ -550,7 +563,7 @@ mark-parentheses = false
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
-known-first-party = ["custom_components", "homeassistant"]
+known-first-party = ["custom_components", "homeassistant", "tests"]
 combine-as-imports = true
 split-on-trailing-comma = false
 
@@ -563,7 +576,7 @@ split-on-trailing-comma = false
 [tool.ruff.lint.per-file-ignores]
 "setup.py" = ["T201"]
 "scripts/**" = ["T201"]
-"tests/**" = ["SLF001", "PLC0415"]
+"tests/**" = ["SLF001", "PLC0415", "S105", "S106"]
 "custom_components/**" = ["TID252"]
 
 [tool.ruff.lint.mccabe]
