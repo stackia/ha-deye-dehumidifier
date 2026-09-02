@@ -21,7 +21,7 @@ from libdeye.cloud_api import (
     DeyeCloudApi,
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
-    DeyeIotPlatform,
+    iot_platform_uses_fog_client,
 )
 from libdeye.mqtt_client import (
     BaseDeyeMqttClient,
@@ -96,9 +96,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             cloud_api,
             ssl.get_default_context(),
         )
-        if any(device["platform"] == DeyeIotPlatform.Classic for device in device_list):
+        if any(
+            not iot_platform_uses_fog_client(device["platform"])
+            for device in device_list
+        ):
             await classic_mqtt_client.connect()
-        if any(device["platform"] == DeyeIotPlatform.Fog for device in device_list):
+        if any(
+            iot_platform_uses_fog_client(device["platform"]) for device in device_list
+        ):
             await fog_mqtt_client.connect()
 
         coordinator_map: dict[str, DeyeDataUpdateCoordinator] = {}
@@ -108,9 +113,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 entry,
                 device,
                 (
-                    classic_mqtt_client
-                    if device["platform"] == DeyeIotPlatform.Classic
-                    else fog_mqtt_client
+                    fog_mqtt_client
+                    if iot_platform_uses_fog_client(device["platform"])
+                    else classic_mqtt_client
                 ),
                 cloud_api,
             )
@@ -182,24 +187,15 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
     async def _publish_command(self) -> None:
         """Publish commands to the device."""
         command = self.coordinator.data.state.to_command()
-        if isinstance(self.coordinator.mqtt_client, DeyeFogMqttClient):
-            properties = command.to_json_diff(self.coordinator.data.reported_state)
-            if not properties:
-                return
-            await self.coordinator.mqtt_client.publish_command(
-                self._device["product_id"],
-                self._device["device_id"],
-                command,
-                properties=properties,
-            )
-            self.coordinator.sync_reported_state_after_publish()
-            return
-
+        is_fog_client = isinstance(self.coordinator.mqtt_client, DeyeFogMqttClient)
         await self.coordinator.mqtt_client.publish_command(
             self._device["product_id"],
             self._device["device_id"],
             command,
+            baseline=self.coordinator.data.reported_state if is_fog_client else None,
         )
+        if is_fog_client:
+            self.coordinator.sync_reported_state_after_publish()
 
     async def publish_command_from_current_state(self) -> None:
         """
