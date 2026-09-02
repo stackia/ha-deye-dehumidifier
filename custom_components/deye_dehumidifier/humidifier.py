@@ -14,11 +14,10 @@ from homeassistant.components.humidifier import (
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import DATA_KEY, DeyeEntity
+from . import DeyeConfigEntry, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 MODE_AIR_PURIFIER = "air_purifier"
@@ -34,11 +33,11 @@ PARALLEL_UPDATES = 0
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    entry: DeyeConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Add dehumidifiers for passed config_entry in HA."""
-    data = hass.data[DATA_KEY][config_entry.entry_id]
+    """Add dehumidifiers for this config entry."""
+    data = entry.runtime_data
     async_add_entities(
         [
             DeyeDehumidifier(

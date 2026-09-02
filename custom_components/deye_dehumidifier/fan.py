@@ -6,7 +6,6 @@ from libdeye.cloud_api import DeyeApiResponseDeviceInfo
 from libdeye.const import DeyeFanSpeed, get_product_feature_config
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.percentage import (
@@ -14,7 +13,7 @@ from homeassistant.util.percentage import (
     percentage_to_ordered_list_item,
 )
 
-from . import DATA_KEY, DeyeEntity
+from . import DeyeConfigEntry, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 # Coordinator is used to centralize the data updates
@@ -53,11 +52,11 @@ def preset_mode_to_deye_fan_speed(preset_mode: str) -> DeyeFanSpeed:
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    entry: DeyeConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Add fans for passed config_entry in HA."""
-    data = hass.data[DATA_KEY][config_entry.entry_id]
+    """Add fans for this config entry."""
+    data = entry.runtime_data
     async_add_entities(
         [
             DeyeFan(

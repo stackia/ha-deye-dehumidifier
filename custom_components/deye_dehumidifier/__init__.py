@@ -25,7 +25,6 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import ssl
-from homeassistant.util.hass_dict import HassKey
 
 from .const import CONF_AUTH_TOKEN, CONF_PASSWORD, CONF_USERNAME, DOMAIN, MANUFACTURER
 from .data_coordinator import DeyeDataUpdateCoordinator
@@ -39,8 +38,6 @@ PLATFORMS: list[Platform] = [
 ]
 
 _LOGGER = logging.getLogger(__name__)
-
-DATA_KEY: HassKey[dict[str, ConfigEntryData]] = HassKey(DOMAIN)
 
 _DEHUMIDIFIER_PRODUCT_TYPES = {"dehumidifier", "除湿机", "其他"}
 
@@ -73,7 +70,10 @@ class ConfigEntryData:
     coordinator_map: dict[str, DeyeDataUpdateCoordinator]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+type DeyeConfigEntry = ConfigEntry[ConfigEntryData]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool:
     """Set up Deye Dehumidifier from a config entry."""
 
     def on_auth_token_refreshed(auth_token: str) -> None:
@@ -108,8 +108,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except DeyeCloudApiCannotConnectError as err:
         raise ConfigEntryNotReady from err
 
-    hass.data.setdefault(DATA_KEY, {})
-    hass.data[DATA_KEY][entry.entry_id] = ConfigEntryData(
+    entry.runtime_data = ConfigEntryData(
         client=client,
         device_list=[device.info for device in devices],
         coordinator_map=coordinator_map,
@@ -120,13 +119,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        data = hass.data[DATA_KEY].pop(entry.entry_id)
-        for coordinator in data.coordinator_map.values():
+        for coordinator in entry.runtime_data.coordinator_map.values():
             coordinator.unsubscribe()
-        data.client.disconnect()
+        entry.runtime_data.client.disconnect()
 
     return unload_ok
 
