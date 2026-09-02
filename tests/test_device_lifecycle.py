@@ -13,11 +13,15 @@ from custom_components.deye_dehumidifier import (
 )
 from custom_components.deye_dehumidifier.const import (
     DOMAIN,
+    SUBENTRY_TYPE_DEVICE,
     is_dehumidifier_product_type,
     is_known_dehumidifier_identifier,
 )
 from custom_components.deye_dehumidifier.data_coordinator import (
     DeyeDeviceListCoordinator,
+)
+from custom_components.deye_dehumidifier.subentries import (
+    async_ensure_device_subentries,
 )
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -99,10 +103,20 @@ def test_async_remove_config_entry_device_without_runtime_data() -> None:
     assert asyncio.run(async_remove_config_entry_device(hass, entry, device_entry))
 
 
-def _make_list_coordinator() -> DeyeDeviceListCoordinator:
+def _make_list_coordinator(*configured_ids: str) -> DeyeDeviceListCoordinator:
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "entry-1"
+    entry.subentries = {
+        f"sub-{device_id}": SimpleNamespace(
+            subentry_type=SUBENTRY_TYPE_DEVICE,
+            unique_id=device_id,
+            data={"device_id": device_id},
+            title=device_id,
+            subentry_id=f"sub-{device_id}",
+        )
+        for device_id in configured_ids
+    }
     with patch(
         "homeassistant.helpers.update_coordinator.DataUpdateCoordinator.__init__",
         return_value=None,
@@ -124,7 +138,7 @@ def _cloud_device(device_id: str, mac: str) -> MagicMock:
 
 def test_adds_coordinator_for_new_device() -> None:
     """A new matching dehumidifier gets a coordinator."""
-    coordinator = _make_list_coordinator()
+    coordinator = _make_list_coordinator("dev-new")
     new_device = _cloud_device("dev-new", "mac-new")
     device_coordinator = MagicMock()
     device_coordinator.async_config_entry_first_refresh = AsyncMock()
@@ -139,9 +153,27 @@ def test_adds_coordinator_for_new_device() -> None:
     assert coordinator.device_list[0]["mac"] == "mac-new"
 
 
-def test_failed_discovery_does_not_join_device_list() -> None:
-    """A failed first refresh must not leave a device without a coordinator."""
+def test_skips_unconfigured_cloud_device() -> None:
+    """Cloud devices without a subentry are listed but not polled."""
     coordinator = _make_list_coordinator()
+    new_device = _cloud_device("dev-new", "mac-new")
+    device_coordinator = MagicMock()
+    device_coordinator.async_config_entry_first_refresh = AsyncMock()
+
+    with patch(
+        "custom_components.deye_dehumidifier.data_coordinator.DeyeDataUpdateCoordinator",
+        return_value=device_coordinator,
+    ):
+        asyncio.run(coordinator._async_sync_devices([new_device]))
+
+    assert "dev-new" not in coordinator.coordinator_map
+    assert coordinator.device_list[0]["mac"] == "mac-new"
+    device_coordinator.async_config_entry_first_refresh.assert_not_called()
+
+
+def test_failed_discovery_does_not_join_coordinator_map() -> None:
+    """A failed first refresh must not leave a device without a coordinator."""
+    coordinator = _make_list_coordinator("dev-new")
     new_device = _cloud_device("dev-new", "mac-new")
     device_coordinator = MagicMock()
     device_coordinator.async_config_entry_first_refresh = AsyncMock(
@@ -156,13 +188,13 @@ def test_failed_discovery_does_not_join_device_list() -> None:
         asyncio.run(coordinator._async_sync_devices([new_device]))
 
     assert "dev-new" not in coordinator.coordinator_map
-    assert coordinator.device_list == []
+    assert coordinator.device_list == [new_device.info]
     device_coordinator.async_shutdown.assert_awaited_once()
 
 
 def test_removes_stale_device_from_registry() -> None:
     """A device missing from the cloud list is removed via HA 2026.8 APIs."""
-    coordinator = _make_list_coordinator()
+    coordinator = _make_list_coordinator("dev-old")
     stale = MagicMock()
     stale.device.info = _device_info("dev-old", "mac-old")
     stale.async_shutdown = AsyncMock()
@@ -191,7 +223,7 @@ def test_removes_stale_device_from_registry() -> None:
 
 def test_failed_cloud_fetch_does_not_drop_devices() -> None:
     """A failed list refresh must not treat every device as stale."""
-    coordinator = _make_list_coordinator()
+    coordinator = _make_list_coordinator("dev-1")
     existing = MagicMock()
     coordinator.coordinator_map["dev-1"] = existing
     coordinator.device_list.append(_device_info("dev-1", "mac-1"))
@@ -224,6 +256,7 @@ def _runtime_entry(
         subentry_id_map={
             device["device_id"]: f"sub-{device['device_id']}" for device in device_list
         },
+        subentry_fingerprint=(),
     )
     entry.async_on_unload = MagicMock()
     return entry
@@ -288,3 +321,47 @@ def test_listener_skips_devices_without_coordinator() -> None:
     )
 
     assert added == [["dev-1"]]
+
+
+def test_ensure_creates_subentries_only_when_none_exist() -> None:
+    """First setup auto-creates subentries; later devices stay user-managed."""
+    hass = MagicMock()
+    entry = SimpleNamespace(subentries={}, title="acct", entry_id="entry-1")
+    created_ids: list[str] = []
+
+    def _add(_entry, subentry) -> None:
+        created_ids.append(subentry.unique_id)
+        entry.subentries[subentry.subentry_id] = subentry
+
+    hass.config_entries.async_add_subentry.side_effect = _add
+    first = _device_info("dev-1", "mac-1")
+    first["product_id"] = "p1"
+    second = _device_info("dev-2", "mac-2")
+    second["product_id"] = "p2"
+    initial: list = [first]
+    with_new_device: list = [first, second]
+
+    with patch(
+        "custom_components.deye_dehumidifier.subentries.async_link_devices_to_subentries"
+    ):
+        created = async_ensure_device_subentries(hass, entry, initial)
+        skipped = async_ensure_device_subentries(hass, entry, with_new_device)
+
+    assert [subentry.unique_id for subentry in created] == ["dev-1"]
+    assert skipped == []
+    assert created_ids == ["dev-1"]
+
+
+def test_unconfigured_coordinator_is_shut_down() -> None:
+    """Removing a subentry drops that device's coordinator without registry delete."""
+    coordinator = _make_list_coordinator()
+    existing = MagicMock()
+    existing.async_shutdown = AsyncMock()
+    coordinator.coordinator_map["dev-1"] = existing
+    still_on_account = _cloud_device("dev-1", "mac-1")
+
+    asyncio.run(coordinator._async_sync_devices([still_on_account]))
+
+    existing.async_shutdown.assert_awaited_once()
+    assert "dev-1" not in coordinator.coordinator_map
+    assert coordinator.device_list[0]["device_id"] == "dev-1"

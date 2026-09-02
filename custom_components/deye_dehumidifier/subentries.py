@@ -119,31 +119,22 @@ def async_ensure_device_subentries(
     entry: ConfigEntry,
     devices: list[DeyeApiResponseDeviceInfo],
 ) -> list[ConfigSubentry]:
-    """Create missing device subentries and link existing HA devices."""
-    existing = configured_device_ids(entry)
+    """Create device subentries on first setup, then only link existing ones.
+
+    Later devices are added from the integration UI. Existing subentries are
+    never deleted here; a missing cloud device stays configured until the
+    user removes it.
+    """
+    if iter_device_subentries(entry):
+        async_link_devices_to_subentries(hass, entry)
+        return []
     created: list[ConfigSubentry] = []
     for info in devices:
-        if info["device_id"] in existing:
-            continue
         subentry = create_device_subentry(info)
         hass.config_entries.async_add_subentry(entry, subentry)
         created.append(subentry)
-        existing.add(info["device_id"])
     async_link_devices_to_subentries(hass, entry)
     return created
-
-
-@callback
-def async_remove_stale_device_subentries(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    current_device_ids: set[str],
-) -> None:
-    """Drop device subentries that are no longer on the Deye account."""
-    for subentry in list(iter_device_subentries(entry)):
-        device_id = subentry.unique_id or subentry.data[CONF_DEVICE_ID]
-        if device_id not in current_device_ids:
-            hass.config_entries.async_remove_subentry(entry, subentry.subentry_id)
 
 
 def subentry_id_map(entry: ConfigEntry) -> dict[str, str]:
@@ -152,6 +143,24 @@ def subentry_id_map(entry: ConfigEntry) -> dict[str, str]:
         (subentry.unique_id or subentry.data[CONF_DEVICE_ID]): subentry.subentry_id
         for subentry in iter_device_subentries(entry)
     }
+
+
+def device_subentry_fingerprint(
+    entry: ConfigEntry,
+) -> tuple[tuple[str, str, str, str, str], ...]:
+    """Stable snapshot of device subentries for change detection."""
+    return tuple(
+        sorted(
+            (
+                subentry.subentry_id,
+                subentry.unique_id or subentry.data[CONF_DEVICE_ID],
+                subentry.title,
+                str(subentry.data.get(CONF_MAC, "")),
+                str(subentry.data.get(CONF_PRODUCT_ID, "")),
+            )
+            for subentry in iter_device_subentries(entry)
+        )
+    )
 
 
 async def async_migrate_v1_device_subentries(
