@@ -21,21 +21,10 @@ from libdeye.cloud_api import (
     DeyeCloudApi,
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
-    iot_platform_uses_fog_client,
 )
-from libdeye.mqtt_client import (
-    BaseDeyeMqttClient,
-    DeyeClassicMqttClient,
-    DeyeFogMqttClient,
-)
+from libdeye.mqtt_client import BaseDeyeMqttClient, mqtt_client_type_for_platform
 
-from .const import (
-    CONF_AUTH_TOKEN,
-    CONF_PASSWORD,
-    CONF_USERNAME,
-    DOMAIN,
-    MANUFACTURER,
-)
+from .const import CONF_AUTH_TOKEN, CONF_PASSWORD, CONF_USERNAME, DOMAIN, MANUFACTURER
 from .data_coordinator import DeyeDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
@@ -88,23 +77,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         )
 
-        classic_mqtt_client = DeyeClassicMqttClient(
-            cloud_api,
-            ssl.get_default_context(),
-        )
-        fog_mqtt_client = DeyeFogMqttClient(
-            cloud_api,
-            ssl.get_default_context(),
-        )
-        if any(
-            not iot_platform_uses_fog_client(device["platform"])
-            for device in device_list
-        ):
-            await classic_mqtt_client.connect()
-        if any(
-            iot_platform_uses_fog_client(device["platform"]) for device in device_list
-        ):
-            await fog_mqtt_client.connect()
+        tls_context = ssl.get_default_context()
+        mqtt_clients_by_type: dict[type[BaseDeyeMqttClient], BaseDeyeMqttClient] = {}
+        for device in device_list:
+            client_cls = mqtt_client_type_for_platform(device["platform"])
+            if client_cls not in mqtt_clients_by_type:
+                client = client_cls(cloud_api, tls_context)
+                await client.connect()
+                mqtt_clients_by_type[client_cls] = client
 
         coordinator_map: dict[str, DeyeDataUpdateCoordinator] = {}
         for device in device_list:
@@ -112,11 +92,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass,
                 entry,
                 device,
-                (
-                    fog_mqtt_client
-                    if iot_platform_uses_fog_client(device["platform"])
-                    else classic_mqtt_client
-                ),
+                mqtt_clients_by_type[mqtt_client_type_for_platform(device["platform"])],
                 cloud_api,
             )
             await coordinator.async_config_entry_first_refresh()
@@ -129,7 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DATA_KEY, {})
     hass.data[DATA_KEY][entry.entry_id] = ConfigEntryData(
-        mqtt_clients=[classic_mqtt_client, fog_mqtt_client],
+        mqtt_clients=list(mqtt_clients_by_type.values()),
         device_list=device_list,
         coordinator_map=coordinator_map,
     )
@@ -187,15 +163,13 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
     async def _publish_command(self) -> None:
         """Publish commands to the device."""
         command = self.coordinator.data.state.to_command()
-        is_fog_client = isinstance(self.coordinator.mqtt_client, DeyeFogMqttClient)
         await self.coordinator.mqtt_client.publish_command(
             self._device["product_id"],
             self._device["device_id"],
             command,
-            baseline=self.coordinator.data.reported_state if is_fog_client else None,
+            baseline=self.coordinator.data.reported_state,
         )
-        if is_fog_client:
-            self.coordinator.sync_reported_state_after_publish()
+        self.coordinator.sync_reported_state_after_publish()
 
     async def publish_command_from_current_state(self) -> None:
         """
