@@ -1010,7 +1010,7 @@ wheels = [
 
 [[package]]
 name = "ha-deye-dehumidifier"
-version = "2.1.8"
+version = "2.2.0"
 source = { virtual = "." }
 dependencies = [
     { name = "libdeye" },
@@ -1029,7 +1029,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "libdeye", specifier = "==2.1.6" }]
+requires-dist = [{ name = "libdeye", specifier = "==3.0.2" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1291,16 +1291,16 @@ wheels = [
 
 [[package]]
 name = "libdeye"
-version = "2.1.6"
+version = "3.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "paho-mqtt" },
     { name = "pyjwt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/ec/b7a77b87788e84912cc9e8266dabf568134eed554b1915568d23e728c150/libdeye-2.1.6.tar.gz", hash = "sha256:7b1753cd99fd5f680d81fb3d460ffdc3f5e9bdc4ba637cd8f72fae4a7ae4997a", size = 52447, upload-time = "2026-08-03T09:37:38.204Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4a/c0/a9c41323590d0404c1a6d0b72e927b8d8a7e85c92806e758b809cc684ed5/libdeye-3.0.2.tar.gz", hash = "sha256:777532a9b925619816af5aa1bff1668f312e626530e7cc5d1cd96a45fa59f5e2", size = 840704, upload-time = "2026-09-02T09:51:47.657Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9c/00/2dbea0da4dfdff0f42583e0d0147dd3c772a62f5f156e565e0ea6cad717e/libdeye-2.1.6-py3-none-any.whl", hash = "sha256:36d2b5b0c7521380b9fd9953f7be252bb813e99731f040ef97f4536e515df5d2", size = 21160, upload-time = "2026-08-03T09:37:37.259Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/52/d3fc2cfa198791f4e11ba6f5f62ad8c1cab9b167ab96566c59a9c1574c28/libdeye-3.0.2-py3-none-any.whl", hash = "sha256:a62f4e08c3050ac2ad64eeae40e22b2434148449aa31ac9899844180524c98f2", size = 30087, upload-time = "2026-09-02T09:51:46.385Z" },
 ]
 
 [[package]]

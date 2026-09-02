@@ -4,17 +4,12 @@ from dataclasses import dataclass
 import logging
 from typing import override
 
+from libdeye.client import DeyeClient
 from libdeye.cloud_api import (
     DeyeApiResponseDeviceInfo,
     DeyeCloudApi,
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
-    DeyeIotPlatform,
-)
-from libdeye.mqtt_client import (
-    BaseDeyeMqttClient,
-    DeyeClassicMqttClient,
-    DeyeFogMqttClient,
 )
 
 from homeassistant.config_entries import ConfigEntry
@@ -44,12 +39,14 @@ _LOGGER = logging.getLogger(__name__)
 
 DATA_KEY: HassKey[dict[str, ConfigEntryData]] = HassKey(DOMAIN)
 
+_DEHUMIDIFIER_PRODUCT_TYPES = {"dehumidifier", "除湿机", "其他"}
+
 
 @dataclass
 class ConfigEntryData:
     """Runtime data stored on a config entry."""
 
-    mqtt_clients: list[BaseDeyeMqttClient]
+    client: DeyeClient
     device_list: list[DeyeApiResponseDeviceInfo]
     coordinator_map: dict[str, DeyeDataUpdateCoordinator]
 
@@ -70,48 +67,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data[CONF_AUTH_TOKEN],
         )
         cloud_api.on_auth_token_refreshed = on_auth_token_refreshed
+        client = DeyeClient(cloud_api, ssl.get_default_context())
 
-        device_list = list(
-            filter(
-                # The product_type was initially set to "dehumidifier"
-                # but at some point (around 06/18/2025) it was changed to "除湿机" or "其他"
-                lambda d: (
-                    d["product_type"] == "dehumidifier"
-                    or d["product_type"] == "除湿机"
-                    or d["product_type"] == "其他"
-                ),
-                await cloud_api.get_device_list(),
-            )
-        )
-
-        classic_mqtt_client = DeyeClassicMqttClient(
-            cloud_api,
-            ssl.get_default_context(),
-        )
-        fog_mqtt_client = DeyeFogMqttClient(
-            cloud_api,
-            ssl.get_default_context(),
-        )
-        if any(device["platform"] == DeyeIotPlatform.Classic for device in device_list):
-            await classic_mqtt_client.connect()
-        if any(device["platform"] == DeyeIotPlatform.Fog for device in device_list):
-            await fog_mqtt_client.connect()
+        devices = [
+            device
+            for device in await client.list_devices()
+            if device.info["product_type"] in _DEHUMIDIFIER_PRODUCT_TYPES
+        ]
 
         coordinator_map: dict[str, DeyeDataUpdateCoordinator] = {}
-        for device in device_list:
-            coordinator = DeyeDataUpdateCoordinator(
-                hass,
-                entry,
-                device,
-                (
-                    classic_mqtt_client
-                    if device["platform"] == DeyeIotPlatform.Classic
-                    else fog_mqtt_client
-                ),
-                cloud_api,
-            )
+        for device in devices:
+            coordinator = DeyeDataUpdateCoordinator(hass, entry, device)
             await coordinator.async_config_entry_first_refresh()
-            coordinator_map[device["device_id"]] = coordinator
+            coordinator_map[device.device_id] = coordinator
 
     except DeyeCloudApiInvalidAuthError as err:
         raise ConfigEntryAuthFailed from err
@@ -120,8 +88,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DATA_KEY, {})
     hass.data[DATA_KEY][entry.entry_id] = ConfigEntryData(
-        mqtt_clients=[classic_mqtt_client, fog_mqtt_client],
-        device_list=device_list,
+        client=client,
+        device_list=[device.info for device in devices],
         coordinator_map=coordinator_map,
     )
 
@@ -134,8 +102,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         data = hass.data[DATA_KEY].pop(entry.entry_id)
-        for mqtt_client in data.mqtt_clients:
-            mqtt_client.disconnect()
+        data.client.disconnect()
 
     return unload_ok
 
@@ -178,24 +145,10 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator], Entity):
     async def _publish_command(self) -> None:
         """Publish commands to the device."""
         command = self.coordinator.data.state.to_command()
-        if isinstance(self.coordinator.mqtt_client, DeyeFogMqttClient):
-            properties = command.to_json_diff(self.coordinator.data.reported_state)
-            if not properties:
-                return
-            await self.coordinator.mqtt_client.publish_command(
-                self._device["product_id"],
-                self._device["device_id"],
-                command,
-                properties=properties,
-            )
-            self.coordinator.sync_reported_state_after_publish()
-            return
-
-        await self.coordinator.mqtt_client.publish_command(
-            self._device["product_id"],
-            self._device["device_id"],
-            command,
+        await self.coordinator.device.apply(
+            command, baseline=self.coordinator.data.reported_state
         )
+        self.coordinator.sync_reported_state_after_publish()
 
     async def publish_command_from_current_state(self) -> None:
         """Publish a command generated from the current desired state.

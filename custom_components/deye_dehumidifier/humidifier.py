@@ -23,6 +23,10 @@ from .data_coordinator import DeyeDataUpdateCoordinator
 MODE_MANUAL = "manual"
 MODE_AIR_PURIFIER = "air_purifier"
 MODE_CLOTHES_DRYER = "clothes_dryer"
+MODE_TURBO = "turbo"
+MODE_MANUAL_PURIFIER = "manual_purifier"
+MODE_SLEEP_PURIFIER = "sleep_purifier"
+MODE_AUTO_PURIFIER = "auto_purifier"
 
 
 async def async_setup_entry(
@@ -89,7 +93,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
     @override
     def is_on(self) -> bool:
         """Return True if device is on."""
-        return self.coordinator.data.state.power_switch
+        return bool(self.coordinator.data.state.power_switch)
 
     @property
     @override
@@ -142,6 +146,14 @@ def deye_mode_to_hass_mode(mode: DeyeDeviceMode) -> str:
         return MODE_AUTO
     if mode == DeyeDeviceMode.SLEEP_MODE:
         return MODE_SLEEP
+    if mode == DeyeDeviceMode.TURBO_MODE:
+        return MODE_TURBO
+    if mode == DeyeDeviceMode.MANUAL_PURIFIER_MODE:
+        return MODE_MANUAL_PURIFIER
+    if mode == DeyeDeviceMode.SLEEP_PURIFIER_MODE:
+        return MODE_SLEEP_PURIFIER
+    if mode == DeyeDeviceMode.AUTO_PURIFIER_MODE:
+        return MODE_AUTO_PURIFIER
     return MODE_MANUAL
 
 
@@ -155,4 +167,12 @@ def hass_mode_to_deye_mode(mode: str) -> DeyeDeviceMode:
         return DeyeDeviceMode.AUTO_MODE
     if mode == MODE_SLEEP:
         return DeyeDeviceMode.SLEEP_MODE
+    if mode == MODE_TURBO:
+        return DeyeDeviceMode.TURBO_MODE
+    if mode == MODE_MANUAL_PURIFIER:
+        return DeyeDeviceMode.MANUAL_PURIFIER_MODE
+    if mode == MODE_SLEEP_PURIFIER:
+        return DeyeDeviceMode.SLEEP_PURIFIER_MODE
+    if mode == MODE_AUTO_PURIFIER:
+        return DeyeDeviceMode.AUTO_PURIFIER_MODE
     return DeyeDeviceMode.MANUAL_MODE

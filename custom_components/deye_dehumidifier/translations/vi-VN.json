@@ -34,8 +34,14 @@
           "mode": {
             "state": {
               "manual": "Thủ công",
-              "air_purifier": "Làm sạch không khí",
-              "clothes_dryer": "Sấy quần áo"
+              "auto": "Tự động",
+              "sleep": "Ngủ",
+              "air_purifier": "Làm sạch",
+              "clothes_dryer": "Sấy",
+              "turbo": "Mạnh",
+              "manual_purifier": "Lọc thủ công",
+              "sleep_purifier": "Lọc khi ngủ",
+              "auto_purifier": "Lọc tự động"
             }
           }
         }
@@ -43,10 +49,10 @@
     },
     "sensor": {
       "temperature": {
-        "name": "Nhiệt độ môi trường"
+        "name": "Nhiệt độ trong nhà"
       },
       "humidity": {
-        "name": "Độ ẩm môi trường"
+        "name": "Độ ẩm trong nhà"
       }
     },
     "switch": {
@@ -60,7 +66,16 @@
         "name": "Ion âm"
       },
       "water_pump": {
-        "name": "Bơm nước"
+        "name": "Bơm thoát nước"
+      },
+      "uv": {
+        "name": "Đèn UV"
+      },
+      "prompt_sound": {
+        "name": "Âm báo"
+      },
+      "screen_display": {
+        "name": "Màn hình"
       }
     },
     "binary_sensor": {
@@ -72,12 +87,12 @@
         }
       },
       "defrosting": {
-        "name": "Rã đông"
+        "name": "Chỉ báo rã đông"
       }
     },
     "fan": {
       "fan": {
-        "name": "Quạt"
+        "name": "Tốc độ gió"
       }
     }
   }

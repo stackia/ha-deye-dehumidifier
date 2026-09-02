@@ -34,8 +34,14 @@
           "mode": {
             "state": {
               "manual": "手動",
+              "auto": "自動",
+              "sleep": "睡眠",
               "air_purifier": "淨化",
-              "clothes_dryer": "乾衣"
+              "clothes_dryer": "乾衣",
+              "turbo": "急速",
+              "manual_purifier": "手動淨化",
+              "sleep_purifier": "睡眠淨化",
+              "auto_purifier": "自動淨化"
             }
           }
         }
@@ -43,10 +49,10 @@
     },
     "sensor": {
       "temperature": {
-        "name": "環境溫度"
+        "name": "室內溫度"
       },
       "humidity": {
-        "name": "環境濕度"
+        "name": "室內濕度"
       }
     },
     "switch": {
@@ -60,7 +66,16 @@
         "name": "負離子"
       },
       "water_pump": {
-        "name": "水泵"
+        "name": "水泵排水"
+      },
+      "uv": {
+        "name": "UV 燈"
+      },
+      "prompt_sound": {
+        "name": "提示音"
+      },
+      "screen_display": {
+        "name": "螢幕顯示"
       }
     },
     "binary_sensor": {
@@ -72,12 +87,12 @@
         }
       },
       "defrosting": {
-        "name": "除霜"
+        "name": "化霜指示"
       }
     },
     "fan": {
       "fan": {
-        "name": "風扇"
+        "name": "風速"
       }
     }
   }

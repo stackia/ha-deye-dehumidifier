@@ -34,8 +34,14 @@
           "mode": {
             "state": {
               "manual": "Manual",
-              "air_purifier": "Purificador de ar",
-              "clothes_dryer": "Secador de roupas"
+              "auto": "Automático",
+              "sleep": "Sono",
+              "air_purifier": "Purificar",
+              "clothes_dryer": "Secagem",
+              "turbo": "Forte",
+              "manual_purifier": "Purificação manual",
+              "sleep_purifier": "Purificação noturna",
+              "auto_purifier": "Purificação automática"
             }
           }
         }
@@ -43,10 +49,10 @@
     },
     "sensor": {
       "temperature": {
-        "name": "Temperatura"
+        "name": "Temperatura interior"
       },
       "humidity": {
-        "name": "Humidade"
+        "name": "Humidade interior"
       }
     },
     "switch": {
@@ -60,7 +66,16 @@
         "name": "Anion"
       },
       "water_pump": {
-        "name": "Bomba de água"
+        "name": "Drenagem da bomba de água"
+      },
+      "uv": {
+        "name": "Luz UV"
+      },
+      "prompt_sound": {
+        "name": "Som de aviso"
+      },
+      "screen_display": {
+        "name": "Ecrã"
       }
     },
     "binary_sensor": {
@@ -72,12 +87,12 @@
         }
       },
       "defrosting": {
-        "name": "Descongelação"
+        "name": "Indicação de descongelação"
       }
     },
     "fan": {
       "fan": {
-        "name": "Ventoinha"
+        "name": "Velocidade do vento"
       }
     }
   }
