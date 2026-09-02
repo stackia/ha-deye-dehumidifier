@@ -35,6 +35,38 @@
       }
     }
   },
+  "config_subentries": {
+    "device": {
+      "title": "Máy hút ẩm",
+      "entry_type": "Máy hút ẩm",
+      "initiate_flow": {
+        "user": "Thêm máy hút ẩm",
+        "reconfigure": "Cấu hình lại máy hút ẩm"
+      },
+      "step": {
+        "user": {
+          "title": "Thêm máy hút ẩm",
+          "description": "Chọn một máy hút ẩm từ tài khoản Deye chưa được thêm.",
+          "data": {
+            "device_id": "Thiết bị"
+          }
+        },
+        "reconfigure": {
+          "title": "Cập nhật máy hút ẩm",
+          "description": "Làm mới **{device_name}** (`{device_id}`) từ tài khoản Deye."
+        }
+      },
+      "abort": {
+        "already_configured": "Máy hút ẩm này đã được cấu hình",
+        "no_devices": "Không tìm thấy máy hút ẩm bổ sung trên tài khoản này",
+        "device_not_found": "Máy hút ẩm này không còn trên tài khoản Deye",
+        "cannot_connect": "Không thể kết nối",
+        "invalid_auth": "Xác thực không hợp lệ",
+        "unknown": "Lỗi không xác định",
+        "reconfigure_successful": "Cấu hình lại thành công"
+      }
+    }
+  },
   "entity": {
     "humidifier": {
       "dehumidifier": {

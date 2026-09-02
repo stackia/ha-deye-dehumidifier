@@ -35,6 +35,38 @@
       }
     }
   },
+  "config_subentries": {
+    "device": {
+      "title": "Dehumidifier",
+      "entry_type": "Dehumidifier",
+      "initiate_flow": {
+        "user": "Add dehumidifier",
+        "reconfigure": "Reconfigure dehumidifier"
+      },
+      "step": {
+        "user": {
+          "title": "Add dehumidifier",
+          "description": "Select a dehumidifier from your Deye account that is not already added.",
+          "data": {
+            "device_id": "Device"
+          }
+        },
+        "reconfigure": {
+          "title": "Update dehumidifier",
+          "description": "Refresh **{device_name}** (`{device_id}`) from your Deye account."
+        }
+      },
+      "abort": {
+        "already_configured": "This dehumidifier is already configured",
+        "no_devices": "No additional dehumidifiers were found on this account",
+        "device_not_found": "This dehumidifier is no longer on the Deye account",
+        "cannot_connect": "Failed to connect",
+        "invalid_auth": "Invalid authentication",
+        "unknown": "Unexpected error",
+        "reconfigure_successful": "Reconfiguration was successful"
+      }
+    }
+  },
   "entity": {
     "humidifier": {
       "dehumidifier": {

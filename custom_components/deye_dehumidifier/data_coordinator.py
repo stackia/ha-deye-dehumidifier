@@ -20,6 +20,7 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEVICE_LIST_UPDATE_INTERVAL, DOMAIN, is_dehumidifier_product_type
+from .subentries import configured_device_ids
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -224,6 +225,7 @@ class DeyeDeviceListCoordinator(DataUpdateCoordinator[list[DeyeApiResponseDevice
         self.coordinator_map = coordinator_map
         self.device_list = device_list
         self._initial_sync = True
+        self._last_devices: list[DeyeDevice] = []
 
     @override
     async def _async_update_data(self) -> list[DeyeApiResponseDeviceInfo]:
@@ -239,34 +241,57 @@ class DeyeDeviceListCoordinator(DataUpdateCoordinator[list[DeyeApiResponseDevice
         except DeyeCloudApiCannotConnectError as err:
             raise UpdateFailed("Cannot connect to Deye Cloud") from err
 
-        try:
-            await self._async_sync_devices(devices)
-        finally:
-            self._initial_sync = False
-
+        self._last_devices = devices
+        await self._async_sync_devices(devices)
         return list(self.device_list)
 
-    async def _async_sync_devices(self, devices: list[DeyeDevice]) -> None:
-        """Create coordinators for new devices and drop stale ones."""
-        current_ids = {device.device_id for device in devices}
-        previous_ids = set(self.coordinator_map)
+    async def async_sync_configured_devices(self) -> None:
+        """Create coordinators for subentries using the last successful list."""
+        if not self._last_devices:
+            return
+        await self._async_sync_devices(self._last_devices)
 
-        for device_id in previous_ids - current_ids:
-            await self._async_remove_stale_device(device_id)
+    def mark_initial_sync_done(self) -> None:
+        """Treat later device-list polls as incremental discovery."""
+        self._initial_sync = False
+
+    async def _async_sync_devices(self, devices: list[DeyeDevice]) -> None:
+        """Create coordinators for configured devices and drop stale ones."""
+        configured = (
+            configured_device_ids(self.config_entry)
+            if self.config_entry is not None
+            else set()
+        )
+        current_ids = {device.device_id for device in devices}
+
+        for device_id in list(self.coordinator_map):
+            if device_id not in current_ids:
+                await self._async_remove_stale_device(device_id)
+            elif device_id not in configured:
+                coordinator = self.coordinator_map.pop(device_id, None)
+                if coordinator is not None:
+                    await coordinator.async_shutdown()
 
         for device in devices:
-            if device.device_id not in self.coordinator_map:
+            if (
+                device.device_id in configured
+                and device.device_id not in self.coordinator_map
+            ):
                 await self._async_add_device(device)
 
+        missing = configured - current_ids
+        if missing and self._initial_sync:
+            for device_id in sorted(missing):
+                _LOGGER.warning(
+                    "Dehumidifier %s is configured but not on the Deye account",
+                    device_id,
+                )
+
         self.device_list.clear()
-        self.device_list.extend(
-            device.info
-            for device in devices
-            if device.device_id in self.coordinator_map
-        )
+        self.device_list.extend(device.info for device in devices)
 
     async def _async_add_device(self, device: DeyeDevice) -> None:
-        """Create a coordinator for a newly discovered dehumidifier."""
+        """Create a coordinator for a configured dehumidifier."""
         if self.config_entry is None:
             raise UpdateFailed("Config entry is missing")
         coordinator = DeyeDataUpdateCoordinator(self.hass, self.config_entry, device)

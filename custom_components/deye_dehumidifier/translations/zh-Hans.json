@@ -35,6 +35,38 @@
       }
     }
   },
+  "config_subentries": {
+    "device": {
+      "title": "除湿机",
+      "entry_type": "除湿机",
+      "initiate_flow": {
+        "user": "添加除湿机",
+        "reconfigure": "重新配置除湿机"
+      },
+      "step": {
+        "user": {
+          "title": "添加除湿机",
+          "description": "从德业账号中选择尚未添加的除湿机。",
+          "data": {
+            "device_id": "设备"
+          }
+        },
+        "reconfigure": {
+          "title": "更新除湿机",
+          "description": "从德业账号刷新 **{device_name}**（`{device_id}`）。"
+        }
+      },
+      "abort": {
+        "already_configured": "该除湿机已经配置过了",
+        "no_devices": "此账号上没有尚未添加的除湿机",
+        "device_not_found": "该除湿机已不在德业账号中",
+        "cannot_connect": "连接失败",
+        "invalid_auth": "身份认证无效",
+        "unknown": "非预期的错误",
+        "reconfigure_successful": "重新配置成功"
+      }
+    }
+  },
   "entity": {
     "humidifier": {
       "dehumidifier": {

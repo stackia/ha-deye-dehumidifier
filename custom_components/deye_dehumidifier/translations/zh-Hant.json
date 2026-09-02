@@ -35,6 +35,38 @@
       }
     }
   },
+  "config_subentries": {
+    "device": {
+      "title": "除濕機",
+      "entry_type": "除濕機",
+      "initiate_flow": {
+        "user": "新增除濕機",
+        "reconfigure": "重新設定除濕機"
+      },
+      "step": {
+        "user": {
+          "title": "新增除濕機",
+          "description": "從德業帳號中選擇尚未新增的除濕機。",
+          "data": {
+            "device_id": "裝置"
+          }
+        },
+        "reconfigure": {
+          "title": "更新除濕機",
+          "description": "從德業帳號重新整理 **{device_name}**（`{device_id}`）。"
+        }
+      },
+      "abort": {
+        "already_configured": "此除濕機已經設定完成",
+        "no_devices": "此帳號上沒有尚未新增的除濕機",
+        "device_not_found": "此除濕機已不在德業帳號中",
+        "cannot_connect": "連線失敗",
+        "invalid_auth": "身份驗證無效",
+        "unknown": "未預期錯誤",
+        "reconfigure_successful": "重新設定成功"
+      }
+    }
+  },
   "entity": {
     "humidifier": {
       "dehumidifier": {
