@@ -17,6 +17,7 @@ git clone git@github.com:stackia/libdeye.git
 cd /workspace/core
 mkdir -p config/custom_components
 ln -s /workspaces/ha-deye-dehumidifier/custom_components/deye_dehumidifier /workspaces/core/config/custom_components/deye_dehumidifier
+# Install Home Assistant core (official core-repo workflow)
 pip install -e .
 ```
 
