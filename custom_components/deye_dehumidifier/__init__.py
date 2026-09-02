@@ -166,8 +166,8 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
 
     async def _publish_command(self) -> None:
         """Publish commands to the device."""
+        command = self.coordinator.data.state.to_command()
         try:
-            command = self.coordinator.data.state.to_command()
             await self.coordinator.device.apply(
                 command, baseline=self.coordinator.data.reported_state
             )
@@ -175,8 +175,7 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
             raise
         except Exception as err:
             raise _wrap_command_exception(err) from err
-        else:
-            self.coordinator.sync_reported_state_after_publish()
+        self.coordinator.sync_reported_state_after_publish()
 
     async def publish_command_from_current_state(self) -> None:
         """Publish a command generated from the current desired state.
@@ -185,12 +184,7 @@ class DeyeEntity(CoordinatorEntity[DeyeDataUpdateCoordinator]):
         """
         self.coordinator.mute_state_update_for_a_while()
         self.coordinator.async_update_listeners()
-        try:
-            await self._debounced_publish_command.async_call()
-        except HomeAssistantError:
-            raise
-        except Exception as err:
-            raise _wrap_command_exception(err) from err
+        await self._debounced_publish_command.async_call()
 
     @property
     @override
