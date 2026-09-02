@@ -40,7 +40,7 @@ def _retry_after_from_exception(err: BaseException) -> float | None:
             if retry_after is not None:
                 try:
                     return max(float(retry_after), 0.0)
-                except TypeError, ValueError:
+                except (TypeError, ValueError):
                     pass
             return _DEFAULT_RATE_LIMIT_RETRY_AFTER
         current = current.__cause__ or current.__context__
