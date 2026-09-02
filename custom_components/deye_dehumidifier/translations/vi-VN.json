@@ -41,6 +41,7 @@
         "state_attributes": {
           "mode": {
             "state": {
+              "normal": "Bình thường",
               "auto": "Tự động",
               "sleep": "Ngủ",
               "air_purifier": "Làm sạch",

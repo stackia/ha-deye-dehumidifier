@@ -76,7 +76,7 @@ class DeyeDehumidifier(DeyeEntity, HumidifierEntity):
         self._attr_min_humidity = feature_config["min_target_humidity"]
         self._attr_max_humidity = feature_config["max_target_humidity"]
         # Deye UIs and official apps step target humidity in 5% increments.
-        self._attr_target_humidity_step = 5
+        self._attr_target_humidity_step = 5.0
         self._attr_entity_picture = device["picture_v3"] or device["product_icon"]
 
     @property
