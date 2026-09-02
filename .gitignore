@@ -4,7 +4,7 @@
 *.so
 *.cfg
 !.isort.cfg
-!setup.cfg
+!.flake8
 *.orig
 *.log
 *.pot
@@ -51,4 +51,3 @@ MANIFEST
 # Per-project virtualenvs
 .venv*/
 .conda*/
-.python-version
