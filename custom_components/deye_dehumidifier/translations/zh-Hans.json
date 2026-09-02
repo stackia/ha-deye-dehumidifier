@@ -3,7 +3,8 @@
   "config": {
     "abort": {
       "already_configured_account": "账户已经配置过了",
-      "reauth_successful": "重新认证成功"
+      "reauth_successful": "重新认证成功",
+      "reconfigure_successful": "重新配置成功"
     },
     "error": {
       "cannot_connect": "连接失败",
@@ -14,6 +15,13 @@
       "reauth_confirm": {
         "title": "使集成重新进行身份认证",
         "description": "请重新输入账号 {username} 的密码",
+        "data": {
+          "password": "密码"
+        }
+      },
+      "reconfigure": {
+        "title": "重新配置集成",
+        "description": "请输入账号 {username} 的新密码",
         "data": {
           "password": "密码"
         }

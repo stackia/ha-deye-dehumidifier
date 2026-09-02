@@ -3,7 +3,8 @@
   "config": {
     "abort": {
       "already_configured_account": "Tài khoản đã được cấu hình",
-      "reauth_successful": "Xác thực lại thành công"
+      "reauth_successful": "Xác thực lại thành công",
+      "reconfigure_successful": "Cấu hình lại thành công"
     },
     "error": {
       "cannot_connect": "Không thể kết nối",
@@ -14,6 +15,13 @@
       "reauth_confirm": {
         "title": "Xác thực lại tích hợp",
         "description": "Vui lòng nhập lại mật khẩu cho tài khoản {username}",
+        "data": {
+          "password": "Mật khẩu"
+        }
+      },
+      "reconfigure": {
+        "title": "Cấu hình lại tích hợp",
+        "description": "Vui lòng nhập mật khẩu mới cho tài khoản {username}",
         "data": {
           "password": "Mật khẩu"
         }
