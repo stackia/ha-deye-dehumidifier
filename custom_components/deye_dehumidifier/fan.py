@@ -17,6 +17,9 @@ from homeassistant.util.percentage import (
 from . import DATA_KEY, DeyeEntity
 from .data_coordinator import DeyeDataUpdateCoordinator
 
+# Coordinator is used to centralize the data updates
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -25,17 +28,16 @@ async def async_setup_entry(
 ) -> None:
     """Add fans for passed config_entry in HA."""
     data = hass.data[DATA_KEY][config_entry.entry_id]
-    for device in data.device_list:
-        feature_config = get_product_feature_config(device["product_id"])
-        if len(feature_config["fan_speed"]) > 0:
-            async_add_entities(
-                [
-                    DeyeFan(
-                        data.coordinator_map[device["device_id"]],
-                        device,
-                    )
-                ]
+    async_add_entities(
+        [
+            DeyeFan(
+                data.coordinator_map[device["device_id"]],
+                device,
             )
+            for device in data.device_list
+            if len(get_product_feature_config(device["product_id"])["fan_speed"]) > 0
+        ]
+    )
 
 
 class DeyeFan(DeyeEntity, FanEntity):
