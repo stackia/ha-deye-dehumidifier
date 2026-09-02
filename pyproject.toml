@@ -17,7 +17,7 @@ classifiers = [
     "Topic :: Home Automation",
 ]
 dependencies = [
-    "libdeye==3.0.0",
+    "libdeye==3.0.1",
 ]
 
 [project.urls]
