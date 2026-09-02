@@ -63,7 +63,6 @@ class DeyeHumiditySensor(DeyeEntity, SensorEntity):
         super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-humidity"
-        self.entity_id = f"sensor.{self.entity_id_base}_humidity"
 
     @property
     @override
@@ -89,7 +88,6 @@ class DeyeTemperatureSensor(DeyeEntity, SensorEntity):
         super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-temperature"
-        self.entity_id = f"sensor.{self.entity_id_base}_temperature"
 
     @property
     @override

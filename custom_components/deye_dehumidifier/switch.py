@@ -109,9 +109,6 @@ class DeyeConfigSwitch(DeyeEntity, SwitchEntity):
         assert self._attr_unique_id is not None
         self._attr_translation_key = spec.translation_key
         self._attr_unique_id += f"-{spec.unique_suffix}"
-        self.entity_id = (
-            f"switch.{self.entity_id_base}_{spec.unique_suffix.replace('-', '_')}"
-        )
         self._state_attr = spec.state_attr
 
     @property
@@ -150,7 +147,6 @@ class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
         super().__init__(coordinator, device)
         assert self._attr_unique_id is not None
         self._attr_unique_id += "-continuous"
-        self.entity_id = f"switch.{self.entity_id_base}_continuous"
         self._min_supported_humidity = min_supported_humidity
 
     @property
