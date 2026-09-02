@@ -92,7 +92,7 @@ def _platform_label(device: DeyeApiResponseDeviceInfo) -> str:
     """Return Classic / Fog / FogCombo from the device-list platform id."""
     try:
         return DeyeIotPlatform(int(device["platform"])).name
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return _enum_name(device["platform"])
 
 
