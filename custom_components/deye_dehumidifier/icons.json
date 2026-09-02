@@ -5,7 +5,7 @@
         "state_attributes": {
           "mode": {
             "state": {
-              "manual": "mdi:cursor-pointer",
+              "normal": "mdi:cursor-pointer",
               "auto": "mdi:refresh-auto",
               "sleep": "mdi:power-sleep",
               "air_purifier": "mdi:air-purifier",
