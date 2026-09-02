@@ -20,6 +20,36 @@ from .data_coordinator import DeyeDataUpdateCoordinator
 # Coordinator is used to centralize the data updates
 PARALLEL_UPDATES = 0
 
+PRESET_MODE_LOW = "low"
+PRESET_MODE_MEDIUM = "medium"
+PRESET_MODE_HIGH = "high"
+PRESET_MODE_FULL = "full"
+PRESET_MODE_AUTO = "auto"
+
+_DEYE_FAN_SPEED_TO_PRESET: dict[DeyeFanSpeed, str] = {
+    DeyeFanSpeed.LOW: PRESET_MODE_LOW,
+    DeyeFanSpeed.MIDDLE: PRESET_MODE_MEDIUM,
+    DeyeFanSpeed.HIGH: PRESET_MODE_HIGH,
+    DeyeFanSpeed.FULL: PRESET_MODE_FULL,
+    DeyeFanSpeed.AUTO: PRESET_MODE_AUTO,
+}
+
+_PRESET_TO_DEYE_FAN_SPEED: dict[str, DeyeFanSpeed] = {
+    preset: speed for speed, preset in _DEYE_FAN_SPEED_TO_PRESET.items()
+}
+
+
+def deye_fan_speed_to_preset_mode(fan_speed: DeyeFanSpeed) -> str | None:
+    """Map DeyeFanSpeed to a Home Assistant fan preset mode."""
+    return _DEYE_FAN_SPEED_TO_PRESET.get(fan_speed)
+
+
+def preset_mode_to_deye_fan_speed(preset_mode: str) -> DeyeFanSpeed:
+    """Map a Home Assistant fan preset mode to DeyeFanSpeed."""
+    if preset_mode not in _PRESET_TO_DEYE_FAN_SPEED:
+        raise ValueError(f"Invalid preset mode: {preset_mode}")
+    return _PRESET_TO_DEYE_FAN_SPEED[preset_mode]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -60,11 +90,17 @@ class DeyeFan(DeyeEntity, FanEntity):
             FanEntityFeature.SET_SPEED
             | FanEntityFeature.TURN_ON
             | FanEntityFeature.TURN_OFF
+            | FanEntityFeature.PRESET_MODE
         )
         if feature_config["oscillating"]:
             self._attr_supported_features |= FanEntityFeature.OSCILLATE
         self._named_fan_speeds = feature_config["fan_speed"]
         self._attr_speed_count = len(self._named_fan_speeds)
+        self._attr_preset_modes = [
+            _DEYE_FAN_SPEED_TO_PRESET[speed]
+            for speed in self._named_fan_speeds
+            if speed in _DEYE_FAN_SPEED_TO_PRESET
+        ]
 
     @property
     @override
@@ -89,6 +125,12 @@ class DeyeFan(DeyeEntity, FanEntity):
         except ValueError:
             return 0
 
+    @property
+    @override
+    def preset_mode(self) -> str | None:
+        """Return the current named fan speed preset."""
+        return deye_fan_speed_to_preset_mode(self.coordinator.data.state.fan_speed)
+
     @override
     async def async_oscillate(self, oscillating: bool) -> None:
         """Oscillate the fan."""
@@ -107,6 +149,14 @@ class DeyeFan(DeyeEntity, FanEntity):
         await self.publish_command_from_current_state()
 
     @override
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Set the fan speed from a named preset."""
+        self.coordinator.data.state.fan_speed = preset_mode_to_deye_fan_speed(
+            preset_mode
+        )
+        await self.publish_command_from_current_state()
+
+    @override
     async def async_turn_on(
         self,
         percentage: int | None = None,
@@ -115,7 +165,11 @@ class DeyeFan(DeyeEntity, FanEntity):
     ) -> None:
         """Turn on the fan."""
         self.coordinator.data.state.power_switch = True
-        if percentage is not None:
+        if preset_mode is not None:
+            self.coordinator.data.state.fan_speed = preset_mode_to_deye_fan_speed(
+                preset_mode
+            )
+        elif percentage is not None:
             fan_speed = DeyeFanSpeed(
                 percentage_to_ordered_list_item(self._named_fan_speeds, percentage)
             )

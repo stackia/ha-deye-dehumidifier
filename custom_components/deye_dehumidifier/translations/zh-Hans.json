@@ -100,7 +100,18 @@
     },
     "fan": {
       "fan": {
-        "name": "风速"
+        "name": "风速",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "low": "低速",
+              "medium": "中速",
+              "high": "高速",
+              "full": "全速",
+              "auto": "自动"
+            }
+          }
+        }
       }
     }
   }
