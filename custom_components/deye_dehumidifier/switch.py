@@ -25,41 +25,50 @@ async def async_setup_entry(
 
     for device in data.device_list:
         feature_config = get_product_feature_config(device["product_id"])
-        async_add_entities(
-            [
-                DeyeChildLockSwitch(
-                    data.coordinator_map[device["device_id"]],
-                    device,
-                )
-            ]
-        )
-        async_add_entities(
-            [
-                DeyeContinuousSwitch(
-                    data.coordinator_map[device["device_id"]],
-                    device,
-                    feature_config["min_target_humidity"],
-                )
-            ]
-        )
+        coordinator = data.coordinator_map[device["device_id"]]
+        entities: list[SwitchEntity] = [
+            DeyeChildLockSwitch(coordinator, device),
+            DeyeContinuousSwitch(
+                coordinator,
+                device,
+                feature_config["min_target_humidity"],
+            ),
+        ]
         if feature_config["anion"]:
-            async_add_entities(
-                [
-                    DeyeAnionSwitch(
-                        data.coordinator_map[device["device_id"]],
-                        device,
-                    )
-                ]
-            )
+            entities.append(DeyeAnionSwitch(coordinator, device))
         if feature_config["water_pump"]:
-            async_add_entities(
-                [
-                    DeyeWaterPumpSwitch(
-                        data.coordinator_map[device["device_id"]],
-                        device,
-                    )
-                ]
+            entities.append(DeyeWaterPumpSwitch(coordinator, device))
+        if feature_config["uv"]:
+            entities.append(
+                DeyeOptionalConfigSwitch(
+                    coordinator,
+                    device,
+                    translation_key="uv",
+                    unique_suffix="uv",
+                    state_attr="uv_switch",
+                )
             )
+        if feature_config["prompt_sound"]:
+            entities.append(
+                DeyeOptionalConfigSwitch(
+                    coordinator,
+                    device,
+                    translation_key="prompt_sound",
+                    unique_suffix="prompt-sound",
+                    state_attr="prompt_sound",
+                )
+            )
+        if feature_config["screen_display"]:
+            entities.append(
+                DeyeOptionalConfigSwitch(
+                    coordinator,
+                    device,
+                    translation_key="screen_display",
+                    unique_suffix="screen-display",
+                    state_attr="screen_display",
+                )
+            )
+        async_add_entities(entities)
 
 
 class DeyeChildLockSwitch(DeyeEntity, SwitchEntity):
@@ -220,4 +229,55 @@ class DeyeContinuousSwitch(DeyeEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the continuous switch off."""
         self.coordinator.data.state.target_humidity = 50
+        await self.publish_command_from_current_state()
+
+
+class DeyeOptionalConfigSwitch(DeyeEntity, SwitchEntity):
+    """Config switch for an optional Fog extra (UV, prompt sound, screen display).
+
+    Product JSON only gates whether the control is shown. The Fog value stays
+    ``None`` until GET reports it or the user toggles the entity.
+    """
+
+    _attr_device_class = SwitchDeviceClass.SWITCH
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator: DeyeDataUpdateCoordinator,
+        device: DeyeApiResponseDeviceInfo,
+        *,
+        translation_key: str,
+        unique_suffix: str,
+        state_attr: str,
+    ) -> None:
+        """Initialize the switch."""
+        super().__init__(coordinator, device)
+        assert self._attr_unique_id is not None
+        self._attr_translation_key = translation_key
+        self._attr_unique_id += f"-{unique_suffix}"
+        self.entity_id = (
+            f"switch.{self.entity_id_base}_{unique_suffix.replace('-', '_')}"
+        )
+        self._state_attr = state_attr
+
+    @property
+    @override
+    def is_on(self) -> bool | None:
+        """Return True/False when the device reported the flag, else unknown."""
+        value = getattr(self.coordinator.data.state, self._state_attr)
+        if isinstance(value, bool):
+            return value
+        return None
+
+    @override
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the switch on."""
+        setattr(self.coordinator.data.state, self._state_attr, True)
+        await self.publish_command_from_current_state()
+
+    @override
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the switch off."""
+        setattr(self.coordinator.data.state, self._state_attr, False)
         await self.publish_command_from_current_state()

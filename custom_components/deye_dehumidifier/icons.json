@@ -6,8 +6,11 @@
           "mode": {
             "state": {
               "manual": "mdi:cursor-pointer",
+              "auto": "mdi:refresh-auto",
+              "sleep": "mdi:power-sleep",
               "air_purifier": "mdi:air-purifier",
-              "clothes_dryer": "mdi:hanger"
+              "clothes_dryer": "mdi:hanger",
+              "turbo": "mdi:fan-plus"
             }
           }
         }
@@ -36,6 +39,24 @@
         "default": "mdi:water-pump",
         "state": {
           "off": "mdi:water-pump-off"
+        }
+      },
+      "uv": {
+        "default": "mdi:sun-wireless",
+        "state": {
+          "off": "mdi:sun-wireless-outline"
+        }
+      },
+      "prompt_sound": {
+        "default": "mdi:volume-high",
+        "state": {
+          "off": "mdi:volume-off"
+        }
+      },
+      "screen_display": {
+        "default": "mdi:monitor",
+        "state": {
+          "off": "mdi:monitor-off"
         }
       }
     },
