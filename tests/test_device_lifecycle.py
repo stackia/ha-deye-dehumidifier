@@ -221,6 +221,9 @@ def _runtime_entry(
         device_list=device_list,
         coordinator_map=coordinators,
         device_list_coordinator=list_coordinator,
+        subentry_id_map={
+            device["device_id"]: f"sub-{device['device_id']}" for device in device_list
+        },
     )
     entry.async_on_unload = MagicMock()
     return entry
@@ -243,10 +246,13 @@ def test_listener_adds_only_new_devices() -> None:
     entry = _runtime_entry([first], coordinators, list_coordinator)
     added: list[list[object]] = []
 
+    def _add(entities, **kwargs):
+        added.append(entities)
+
     async_setup_dynamic_entities(
         hass,
         entry,
-        added.append,
+        _add,
         lambda coordinator, device: [f"{device['device_id']}:{id(coordinator)}"],
     )
 
@@ -254,6 +260,7 @@ def test_listener_adds_only_new_devices() -> None:
     assert added[0][0] == f"dev-1:{id(coordinators['dev-1'])}"
 
     entry.runtime_data.device_list.extend([second])
+    entry.runtime_data.subentry_id_map["dev-2"] = "sub-dev-2"
     listener_holder[0]()
 
     assert len(added) == 2
@@ -270,10 +277,13 @@ def test_listener_skips_devices_without_coordinator() -> None:
     entry = _runtime_entry([first, orphan], coordinators, list_coordinator)
     added: list[list[object]] = []
 
+    def _add(entities, **kwargs):
+        added.append(entities)
+
     async_setup_dynamic_entities(
         hass,
         entry,
-        added.append,
+        _add,
         lambda coordinator, device: [device["device_id"]],
     )
 

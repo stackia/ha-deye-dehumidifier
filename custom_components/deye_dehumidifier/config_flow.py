@@ -5,17 +5,41 @@ import logging
 from typing import Any, override
 
 from libdeye.cloud_api import (
+    DeyeApiResponseDeviceInfo,
     DeyeCloudApi,
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow as ConfigFlowBase, ConfigFlowResult
-from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow as ConfigFlowBase,
+    ConfigFlowResult,
+    ConfigSubentryFlow,
+    SubentryFlowResult,
+)
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+)
 
-from .const import CONF_AUTH_TOKEN, CONF_PASSWORD, CONF_USERNAME, DOMAIN
+from .const import (
+    CONF_AUTH_TOKEN,
+    CONF_DEVICE_ID,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    DOMAIN,
+    SUBENTRY_TYPE_DEVICE,
+)
+from .subentries import (
+    async_list_dehumidifier_infos,
+    configured_device_ids,
+    device_subentry_data,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,7 +86,16 @@ async def validate_input(
 class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
     """Handle a config flow for Deye Dehumidifier."""
 
-    VERSION = 1
+    VERSION = 2
+
+    @classmethod
+    @callback
+    @override
+    def async_get_supported_subentry_types(
+        cls, config_entry: ConfigEntry
+    ) -> dict[str, type[ConfigSubentryFlow]]:
+        """Return subentries supported by this integration."""
+        return {SUBENTRY_TYPE_DEVICE: DeviceSubentryFlowHandler}
 
     @override
     async def async_step_user(
@@ -158,3 +191,115 @@ class ConfigFlow(ConfigFlowBase, domain=DOMAIN):
                 CONF_AUTH_TOKEN: result["data"][CONF_AUTH_TOKEN],
             },
         )
+
+
+class DeviceSubentryFlowHandler(ConfigSubentryFlow):
+    """Handle add and reconfigure flows for a dehumidifier subentry."""
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Let the user add a cloud dehumidifier that is not already configured."""
+        entry = self._get_entry()
+        errors, available = await self._async_available_devices(entry)
+        if errors:
+            return self.async_abort(reason=errors["base"])
+        if not available:
+            return self.async_abort(reason="no_devices")
+
+        if user_input is not None:
+            device = next(
+                (
+                    info
+                    for info in available
+                    if info["device_id"] == user_input[CONF_DEVICE_ID]
+                ),
+                None,
+            )
+            if device is None:
+                return self.async_abort(reason="device_not_found")
+            if device["device_id"] in configured_device_ids(entry):
+                return self.async_abort(reason="already_configured")
+            return self.async_create_entry(
+                title=device["device_name"],
+                data=device_subentry_data(device),
+                unique_id=device["device_id"],
+            )
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_DEVICE_ID): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(
+                                    value=info["device_id"],
+                                    label=f"{info['device_name']} ({info['mac']})",
+                                )
+                                for info in available
+                            ]
+                        )
+                    )
+                }
+            ),
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Refresh a dehumidifier subentry from the current cloud device list."""
+        entry = self._get_entry()
+        subentry = self._get_reconfigure_subentry()
+        device_id = subentry.unique_id or subentry.data[CONF_DEVICE_ID]
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=vol.Schema({}),
+                description_placeholders={
+                    "device_name": subentry.title,
+                    "device_id": device_id,
+                },
+            )
+
+        errors, devices = await self._async_account_devices(entry)
+        if errors:
+            return self.async_abort(reason=errors["base"])
+        device = next(
+            (info for info in devices if info["device_id"] == device_id),
+            None,
+        )
+        if device is None:
+            return self.async_abort(reason="device_not_found")
+
+        return self.async_update_and_abort(
+            entry,
+            subentry,
+            title=device["device_name"],
+            data=device_subentry_data(device),
+        )
+
+    async def _async_available_devices(
+        self, entry: ConfigEntry
+    ) -> tuple[dict[str, str], list[DeyeApiResponseDeviceInfo]]:
+        """Return dehumidifier rows that are not already a subentry."""
+        errors, devices = await self._async_account_devices(entry)
+        if errors:
+            return errors, []
+        already_added = configured_device_ids(entry)
+        return {}, [info for info in devices if info["device_id"] not in already_added]
+
+    async def _async_account_devices(
+        self, entry: ConfigEntry
+    ) -> tuple[dict[str, str], list[DeyeApiResponseDeviceInfo]]:
+        """Fetch dehumidifier rows for the parent account."""
+        try:
+            return {}, await async_list_dehumidifier_infos(self.hass, entry)
+        except DeyeCloudApiCannotConnectError:
+            return {"base": "cannot_connect"}, []
+        except DeyeCloudApiInvalidAuthError:
+            return {"base": "invalid_auth"}, []
+        except Exception:
+            _LOGGER.exception("Unexpected exception while listing Deye devices")
+            return {"base": "unknown"}, []

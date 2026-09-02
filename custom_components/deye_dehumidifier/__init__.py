@@ -1,9 +1,9 @@
 """The Deye Dehumidifier integration."""
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import logging
-from typing import TypeVar, override
+from typing import Any, TypeVar, override
 
 from libdeye.client import DeyeClient
 from libdeye.cloud_api import (
@@ -41,6 +41,12 @@ from .issues import (
     MqttDisconnectMonitor,
     async_delete_entry_issues,
     async_sync_unknown_product_issues,
+)
+from .subentries import (
+    async_ensure_device_subentries,
+    async_migrate_v1_device_subentries,
+    async_remove_stale_device_subentries,
+    subentry_id_map as build_subentry_id_map,
 )
 
 PLATFORMS: list[Platform] = [
@@ -81,6 +87,7 @@ class ConfigEntryData:
     device_list: list[DeyeApiResponseDeviceInfo]
     coordinator_map: dict[str, DeyeDataUpdateCoordinator]
     device_list_coordinator: DeyeDeviceListCoordinator
+    subentry_id_map: dict[str, str]
     mqtt_monitor: MqttDisconnectMonitor | None = None
 
 
@@ -88,7 +95,12 @@ type DeyeConfigEntry = ConfigEntry[ConfigEntryData]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool:
-    """Set up Deye Dehumidifier from a config entry."""
+    """Set up Deye Dehumidifier from a config entry.
+
+    The parent entry owns the cloud account and pooled MQTT clients.
+    Each dehumidifier is a config subentry; coordinators and entities
+    follow the cloud device list and those subentries.
+    """
 
     def on_auth_token_refreshed(auth_token: str) -> None:
         hass.config_entries.async_update_entry(
@@ -118,17 +130,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool
         client.disconnect()
         raise
 
+    created = async_ensure_device_subentries(hass, entry, device_list)
+    if created:
+        _LOGGER.debug(
+            "Created %s dehumidifier subentries for %s",
+            len(created),
+            entry.title,
+        )
+
     mqtt_monitor = MqttDisconnectMonitor(hass, entry.entry_id, client)
     entry.runtime_data = ConfigEntryData(
         client=client,
         device_list=device_list,
         coordinator_map=coordinator_map,
         device_list_coordinator=device_list_coordinator,
+        subentry_id_map=build_subentry_id_map(entry),
         mqtt_monitor=mqtt_monitor,
     )
 
     async_sync_unknown_product_issues(hass, entry.entry_id, device_list)
     mqtt_monitor.async_start()
+
+    @callback
+    def _async_sync_subentries() -> None:
+        data = entry.runtime_data
+        async_ensure_device_subentries(hass, entry, data.device_list)
+        async_remove_stale_device_subentries(
+            hass, entry, {device["device_id"] for device in data.device_list}
+        )
+        data.subentry_id_map.clear()
+        data.subentry_id_map.update(build_subentry_id_map(entry))
 
     @callback
     def _async_sync_issues() -> None:
@@ -137,11 +168,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeyeConfigEntry) -> bool
         )
 
     entry.async_on_unload(
+        device_list_coordinator.async_add_listener(_async_sync_subentries)
+    )
+    entry.async_on_unload(
         device_list_coordinator.async_add_listener(_async_sync_issues)
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate a config entry to the current version."""
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        entry.version,
+        entry.minor_version,
+    )
+
+    if entry.version > 2:
+        return False
+
+    if entry.version < 2:
+        created = await async_migrate_v1_device_subentries(hass, entry)
+        hass.config_entries.async_update_entry(entry, version=2)
+        _LOGGER.debug(
+            "Migrated %s dehumidifier subentries for %s",
+            len(created),
+            entry.title,
+        )
+
+    _LOGGER.debug(
+        "Migration to configuration version %s.%s successful",
+        entry.version,
+        entry.minor_version,
+    )
     return True
 
 
@@ -177,7 +239,7 @@ _T = TypeVar("_T")
 def async_setup_dynamic_entities(
     hass: HomeAssistant,
     config_entry: DeyeConfigEntry,
-    async_add_entities: Callable[[Iterable[_T]], object],
+    async_add_entities: Callable[..., Any],
     entity_factory: Callable[
         [DeyeDataUpdateCoordinator, DeyeApiResponseDeviceInfo], Sequence[_T]
     ],
@@ -190,18 +252,21 @@ def async_setup_dynamic_entities(
     def _async_add_new_devices() -> None:
         current_ids = {device["device_id"] for device in data.device_list}
         known_devices.intersection_update(current_ids)
-        new_entities: list[_T] = []
+        by_subentry: dict[str, list[_T]] = {}
         for device in data.device_list:
             device_id = device["device_id"]
             if device_id in known_devices:
                 continue
             coordinator = data.coordinator_map.get(device_id)
-            if coordinator is None:
+            subentry_id = data.subentry_id_map.get(device_id)
+            if coordinator is None or subentry_id is None:
                 continue
             known_devices.add(device_id)
-            new_entities.extend(entity_factory(coordinator, device))
-        if new_entities:
-            async_add_entities(new_entities)
+            by_subentry.setdefault(subentry_id, []).extend(
+                entity_factory(coordinator, device)
+            )
+        for subentry_id, new_entities in by_subentry.items():
+            async_add_entities(new_entities, config_subentry_id=subentry_id)
 
     _async_add_new_devices()
     config_entry.async_on_unload(

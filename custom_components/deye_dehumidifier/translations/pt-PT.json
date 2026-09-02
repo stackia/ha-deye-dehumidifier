@@ -35,6 +35,38 @@
       }
     }
   },
+  "config_subentries": {
+    "device": {
+      "title": "Desumidificador",
+      "entry_type": "Desumidificador",
+      "initiate_flow": {
+        "user": "Adicionar desumidificador",
+        "reconfigure": "Reconfigurar desumidificador"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar desumidificador",
+          "description": "Selecione um desumidificador da sua conta Deye que ainda não tenha sido adicionado.",
+          "data": {
+            "device_id": "Dispositivo"
+          }
+        },
+        "reconfigure": {
+          "title": "Atualizar desumidificador",
+          "description": "Atualizar **{device_name}** (`{device_id}`) a partir da sua conta Deye."
+        }
+      },
+      "abort": {
+        "already_configured": "Este desumidificador já está configurado",
+        "no_devices": "Não foram encontrados desumidificadores adicionais nesta conta",
+        "device_not_found": "Este desumidificador já não está na conta Deye",
+        "cannot_connect": "Falha na ligação",
+        "invalid_auth": "Falha na autenticação",
+        "unknown": "Erro desconhecido",
+        "reconfigure_successful": "A reconfiguração foi bem-sucedida"
+      }
+    }
+  },
   "entity": {
     "humidifier": {
       "dehumidifier": {
