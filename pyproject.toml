@@ -1,6 +1,67 @@
-[build-system]
-requires = ["setuptools>=46.1.0"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "ha-deye-dehumidifier"
+version = "2.1.8"
+description = "Home Assistant integration for Deye Dehumidifier"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+authors = [
+    { name = "Stackie Jia", email = "jsq2627@gmail.com" },
+]
+requires-python = ">=3.13"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Home Automation",
+]
+dependencies = [
+    "libdeye==2.1.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/stackia/ha-deye-dehumidifier/"
+Source = "https://github.com/stackia/ha-deye-dehumidifier/"
+
+[dependency-groups]
+dev = [
+    "pre-commit",
+    "mypy",
+    "homeassistant==2024.11.0",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
 
 [tool.isort]
 profile = "black"
+
+[tool.mypy]
+python_version = "3.13"
+exclude = ["docs"]
+show_error_codes = true
+follow_imports = "silent"
+ignore_missing_imports = true
+local_partial_types = true
+strict_equality = true
+strict_bytes = true
+no_implicit_optional = true
+warn_incomplete_stub = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+enable_error_code = ["deprecated", "ignore-without-code", "redundant-self", "truthy-iterable"]
+disable_error_code = ["annotation-unchecked", "import-not-found", "import-untyped"]
+extra_checks = false
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unreachable = true
+no_implicit_reexport = true
+disallow_any_generics = true
