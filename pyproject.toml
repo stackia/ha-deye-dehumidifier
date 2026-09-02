@@ -34,7 +34,8 @@ dev = [
     "pylint-per-file-ignores==3.2.1",
     "codespell==2.4.3",
     "yamllint==1.38.0",
-    "homeassistant==2026.8.3",
+    # First Home Assistant release that requires Python 3.14.
+    "homeassistant==2026.3.0",
 ]
 
 [tool.uv]
