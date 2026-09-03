@@ -4,7 +4,11 @@ from collections.abc import Callable
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-from libdeye.cloud_api import DeyeApiResponseDeviceInfo, DeyeIotPlatform
+from libdeye.cloud_api import (
+    DeyeApiResponseDeviceInfo,
+    DeyeIotPlatform,
+    transport_for_device,
+)
 from libdeye.device_state import DeyeDeviceState
 
 from custom_components.deye_dehumidifier.const import (
@@ -64,12 +68,18 @@ class FakeDeyeDevice:
             payload if isinstance(payload, str) else DEFAULT_STATE_HEX
         )
         self.state = self.reported_state.copy()
+        self.transport = transport_for_device(info)
         self.ensure_connected = AsyncMock(return_value=MagicMock())
-        self.request_refresh = AsyncMock(return_value=None)
+        self.request_refresh = AsyncMock(side_effect=self._async_request_refresh)
         self.apply = AsyncMock()
         self._on_state: Callable[[DeyeDeviceState], None] | None = None
         self._on_availability: Callable[[bool], None] | None = None
         self._unsub: Callable[[], None] = lambda: None
+
+    async def _async_request_refresh(self) -> None:
+        """Deliver the current state to the subscriber, like a healthy MQTT reply."""
+        if self._on_state is not None:
+            self._on_state(self.reported_state)
 
     def subscribe(
         self,

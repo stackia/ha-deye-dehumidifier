@@ -20,6 +20,14 @@ ISSUE_TRACKER_URL = "https://github.com/stackia/ha-deye-dehumidifier/issues"
 MQTT_DISCONNECT_ISSUE_DELAY = timedelta(minutes=15)
 MQTT_DISCONNECT_CHECK_INTERVAL = timedelta(minutes=1)
 
+# Classic/Combo polls publish MQTT query bytes and must see a real
+# status/hex reply. A single timeout is treated as transient; a second
+# consecutive miss marks entities unavailable and reloads the entry so
+# the pooled MQTT client is destroyed and recreated.
+CLASSIC_STATE_QUERY_TIMEOUT = 12
+CLASSIC_QUERY_FAILURES_BEFORE_RECOVERY = 2
+CLASSIC_RECOVERY_DELAY = 5
+
 # The product_type was initially set to "dehumidifier"
 # but at some point (around 06/18/2025) it was changed to "除湿机" or "其他"
 DEHUMIDIFIER_PRODUCT_TYPES = frozenset({"dehumidifier", "除湿机", "其他"})

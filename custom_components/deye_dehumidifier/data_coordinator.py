@@ -1,5 +1,6 @@
 """Data update coordinator for Deye dehumidifier devices."""
 
+import asyncio
 from datetime import datetime, timedelta
 import logging
 from typing import NamedTuple, override
@@ -9,6 +10,7 @@ from libdeye.cloud_api import (
     DeyeApiResponseDeviceInfo,
     DeyeCloudApiCannotConnectError,
     DeyeCloudApiInvalidAuthError,
+    DeyeDeviceTransport,
 )
 from libdeye.device_state import DeyeDeviceState
 
@@ -19,7 +21,14 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DEVICE_LIST_UPDATE_INTERVAL, DOMAIN, is_dehumidifier_product_type
+from .const import (
+    CLASSIC_QUERY_FAILURES_BEFORE_RECOVERY,
+    CLASSIC_RECOVERY_DELAY,
+    CLASSIC_STATE_QUERY_TIMEOUT,
+    DEVICE_LIST_UPDATE_INTERVAL,
+    DOMAIN,
+    is_dehumidifier_product_type,
+)
 from .subentries import configured_device_ids
 
 _LOGGER = logging.getLogger(__name__)
@@ -82,6 +91,10 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         self.state_update_muted: CALLBACK_TYPE | None = None
         self._unsubscribers: list[CALLBACK_TYPE] = []
         self._unavailable_logged = False
+        self._classic_query_failures = 0
+        self._poll_forced_unavailable = False
+        self._classic_reload_unsub: CALLBACK_TYPE | None = None
+        self._classic_poll_waiter: asyncio.Future[DeyeDeviceState] | None = None
 
     @override
     async def _async_setup(self) -> None:
@@ -112,6 +125,11 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         if self.state_update_muted:
             self.state_update_muted()
             self.state_update_muted = None
+        self._cancel_classic_recovery()
+        waiter = self._classic_poll_waiter
+        if waiter is not None and not waiter.done():
+            waiter.cancel()
+        self._classic_poll_waiter = None
 
     @override
     async def async_shutdown(self) -> None:
@@ -132,18 +150,26 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
 
     def update_device_state(self, state: DeyeDeviceState) -> None:
         """Will be called when received new DeyeDeviceState."""
+        recovered = self._classic_query_failures > 0 or self._poll_forced_unavailable
+        self._clear_classic_query_failure()
+        waiter = self._classic_poll_waiter
+        if waiter is not None and not waiter.done():
+            waiter.set_result(state)
+            return
         if self.state_update_muted:
             return
         self.async_set_updated_data(
             DeyeDeviceData(
                 reported_state=state,
                 state=state.copy(),
-                available=self.data.available,
+                available=True if recovered else self.data.available,
             )
         )
 
     def update_device_availability(self, available: bool) -> None:
         """Will be called when received device availability change."""
+        if self._poll_forced_unavailable and available:
+            return
         self._log_availability(available)
         self.async_set_updated_data(
             DeyeDeviceData(
@@ -172,19 +198,108 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
             available=self.data.available,
         )
 
+    def _clear_classic_query_failure(self) -> None:
+        """Reset Classic poll-failure tracking and cancel a pending reload."""
+        if self._classic_query_failures:
+            _LOGGER.info(
+                "Classic MQTT state updates recovered for %s after %s "
+                "consecutive failure(s)",
+                self.name,
+                self._classic_query_failures,
+            )
+        self._classic_query_failures = 0
+        self._poll_forced_unavailable = False
+        self._cancel_classic_recovery()
+
+    @callback
+    def _cancel_classic_recovery(self) -> None:
+        """Cancel a pending config-entry reload."""
+        if self._classic_reload_unsub is None:
+            return
+        self._classic_reload_unsub()
+        self._classic_reload_unsub = None
+
+    def _schedule_classic_recovery(self) -> None:
+        """Reload the config entry so the pooled MQTT client is recreated."""
+        if self._classic_reload_unsub is not None or self.config_entry is None:
+            return
+
+        @callback
+        def _reload(_now: datetime) -> None:
+            self._classic_reload_unsub = None
+            if self.config_entry is None:
+                return
+            entry_id = self.config_entry.entry_id
+            _LOGGER.warning(
+                "Reloading Deye config entry after %s consecutive Classic "
+                "MQTT state query failures for %s",
+                self._classic_query_failures,
+                self.name,
+            )
+            self.hass.async_create_task(
+                self.hass.config_entries.async_reload(entry_id),
+                name=f"Reload Deye config entry {entry_id}",
+            )
+
+        self._classic_reload_unsub = async_call_later(
+            self.hass, CLASSIC_RECOVERY_DELAY, _reload
+        )
+
+    def _handle_classic_query_timeout(self) -> DeyeDeviceData:
+        """Keep last state once; then mark unavailable and recover."""
+        self._classic_query_failures += 1
+        _LOGGER.warning(
+            "Classic MQTT state query for %s timed out after %ss "
+            "(%s/%s consecutive failures)",
+            self.name,
+            CLASSIC_STATE_QUERY_TIMEOUT,
+            self._classic_query_failures,
+            CLASSIC_QUERY_FAILURES_BEFORE_RECOVERY,
+        )
+        if self._classic_query_failures < CLASSIC_QUERY_FAILURES_BEFORE_RECOVERY:
+            return self.data
+
+        self._poll_forced_unavailable = True
+        self._schedule_classic_recovery()
+        return DeyeDeviceData(
+            reported_state=self.data.reported_state,
+            state=self.data.state,
+            available=False,
+        )
+
+    async def _async_query_classic_state(self) -> DeyeDeviceState:
+        """Publish a Classic/Combo poll and wait for the next MQTT state."""
+        waiter: asyncio.Future[DeyeDeviceState] = (
+            asyncio.get_running_loop().create_future()
+        )
+        self._classic_poll_waiter = waiter
+        try:
+            await self.device.request_refresh()
+            async with asyncio.timeout(CLASSIC_STATE_QUERY_TIMEOUT):
+                return await waiter
+        finally:
+            self._classic_poll_waiter = None
+
     @override
     async def _async_update_data(self) -> DeyeDeviceData:
         """Poll device state. Some Deye devices have a long heartbeat period.
 
-        Fog uses HTTP ``RealData`` poll; Classic/Combo publish the MQTT query
-        command. Both keep mute-window behavior and wait for MQTT for the
-        next payload when ``request_refresh`` returns ``None``.
+        Fog uses HTTP ``RealData`` poll and returns when the POST succeeds.
+        Classic/Combo publish the MQTT query command and wait for the
+        matching ``status/hex`` payload. A cached return is not treated as
+        proof that MQTT is still working.
         """
         if self.state_update_muted:
             return self.data
 
         try:
-            reported_state = await self.device.request_refresh()
+            if self.device.transport is DeyeDeviceTransport.FOG:
+                reported_state = await self.device.request_refresh()
+            else:
+                try:
+                    reported_state = await self._async_query_classic_state()
+                except TimeoutError:
+                    return self._handle_classic_query_timeout()
         except DeyeCloudApiInvalidAuthError as err:
             raise ConfigEntryAuthFailed from err
         except (DeyeCloudApiCannotConnectError, OSError) as err:
@@ -198,7 +313,7 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
         return DeyeDeviceData(
             reported_state=reported_state,
             state=reported_state.copy(),
-            available=self.data.available,
+            available=True,
         )
 
 
