@@ -1,6 +1,6 @@
 [project]
 name = "ha-deye-dehumidifier"
-version = "3.0.0"
+version = "3.0.1"
 description = "Home Assistant integration for Deye Dehumidifier"
 readme = "README.md"
 license = "MIT"
@@ -17,7 +17,7 @@ classifiers = [
     "Topic :: Home Automation",
 ]
 dependencies = [
-    "libdeye==3.0.2",
+    "libdeye==3.0.3",
 ]
 
 [project.urls]
