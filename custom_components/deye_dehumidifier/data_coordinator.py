@@ -132,18 +132,24 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
 
     def update_device_state(self, state: DeyeDeviceState) -> None:
         """Will be called when received new DeyeDeviceState."""
+        # A device can resume reporting without another MQTT online event.
+        self.device.available = True
+        self._log_availability(True)
         if self.state_update_muted:
+            if not self.data.available:
+                self.update_device_availability(True)
             return
         self.async_set_updated_data(
             DeyeDeviceData(
                 reported_state=state,
                 state=state.copy(),
-                available=self.data.available,
+                available=True,
             )
         )
 
     def update_device_availability(self, available: bool) -> None:
         """Will be called when received device availability change."""
+        self.device.available = available
         self._log_availability(available)
         self.async_set_updated_data(
             DeyeDeviceData(
@@ -152,6 +158,23 @@ class DeyeDataUpdateCoordinator(DataUpdateCoordinator[DeyeDeviceData]):
                 available=available,
             )
         )
+
+    @callback
+    def sync_cloud_device(self, device: DeyeDevice) -> None:
+        """Reconcile online status while keeping the subscribed device alive.
+
+        The cloud list creates new wrappers on each poll. Copy their metadata
+        onto the existing wrapper, but keep its MQTT subscriptions and state.
+        This also repairs a missed online/offline MQTT notification.
+        """
+        self.device.info = device.info
+        if "online" not in device.info:
+            return
+        available = bool(device.info["online"])
+        if available != self.data.available:
+            self.update_device_availability(available)
+        else:
+            self.device.available = available
 
     def _log_availability(self, available: bool) -> None:
         """Log once when a device becomes unavailable, and once when it recovers."""
@@ -273,10 +296,9 @@ class DeyeDeviceListCoordinator(DataUpdateCoordinator[list[DeyeApiResponseDevice
                     await coordinator.async_shutdown()
 
         for device in devices:
-            if (
-                device.device_id in configured
-                and device.device_id not in self.coordinator_map
-            ):
+            if coordinator := self.coordinator_map.get(device.device_id):
+                coordinator.sync_cloud_device(device)
+            elif device.device_id in configured:
                 await self._async_add_device(device)
 
         missing = configured - current_ids
